@@ -1,0 +1,113 @@
+<?php
+
+namespace App\Http\Controllers\Api;
+
+use App\Http\Controllers\Controller;
+use App\Models\Application;
+use App\Models\ForeignAgency;
+use App\Models\Job;
+use App\Models\User;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
+
+class AdminController extends Controller
+{
+    public function stats()
+    {
+        return response()->json([
+            'total_users' => User::count(),
+            'total_seekers' => User::where('role', 'seeker')->count(),
+            'total_partners' => User::where('role', 'admin')->where('admin_type', 'partner')->count(),
+            'pending_partner_approvals' => ForeignAgency::where('status', 'pending_approval')->count(),
+            'total_jobs' => Job::count(),
+            'pending_jobs' => Job::where('job_status', 'pending')->count(),
+            'published_jobs' => Job::where('job_status', 'published')->count(),
+            'closed_jobs' => Job::where('job_status', 'closed')->count(),
+            'pending_applications' => Application::where('workflow_status', 'applied')->count(),
+            'shortlisted_applications' => Application::where('workflow_status', 'shortlisted')->count(),
+            'hired_applications' => Application::where('workflow_status', 'hired')->count(),
+            'placed_applications' => Application::where('workflow_status', 'placed')->count(),
+        ]);
+    }
+
+    public function pendingAgencies()
+    {
+        $agencies = ForeignAgency::with('owner:id,name,email,phone')
+            ->where('status', 'pending_approval')
+            ->latest()
+            ->paginate(20);
+
+        return response()->json($agencies);
+    }
+
+    public function reviewAgency(Request $request, ForeignAgency $foreignAgency)
+    {
+        $validated = $request->validate([
+            'action' => ['required', 'in:approve,reject'],
+            'review_notes' => ['nullable', 'string'],
+        ]);
+
+        $isApprove = $validated['action'] === 'approve';
+
+        $foreignAgency->update([
+            'status' => $isApprove ? 'approved' : 'rejected',
+            'approved_by' => $request->user()->id,
+            'approved_at' => now(),
+            'review_notes' => $validated['review_notes'] ?? null,
+        ]);
+
+        $foreignAgency->owner()->update([
+            'account_status' => $isApprove ? 'active' : 'inactive',
+        ]);
+
+        return response()->json([
+            'message' => $isApprove ? 'Foreign agency approved.' : 'Foreign agency rejected.',
+            'agency' => $foreignAgency->fresh(['owner:id,name,email,account_status', 'approver:id,name,email']),
+        ]);
+    }
+
+    public function downloadAgencyLicense(ForeignAgency $foreignAgency)
+    {
+        if (! Storage::disk('private')->exists($foreignAgency->license_file_path)) {
+            return response()->json(['message' => 'License file not found.'], 404);
+        }
+
+        $stream = Storage::disk('private')->readStream($foreignAgency->license_file_path);
+        $filename = basename($foreignAgency->license_file_path);
+
+        return response()->streamDownload(function () use ($stream) {
+            fpassthru($stream);
+            if (is_resource($stream)) {
+                fclose($stream);
+            }
+        }, $filename);
+    }
+
+    public function createStaff(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'email', 'max:255', 'unique:users,email'],
+            'phone' => ['required', 'regex:/^\+251[0-9]{9}$/'],
+            'password' => ['required', 'string', 'min:8', 'confirmed'],
+            'preferred_language' => ['nullable', 'in:en,am,ar,or'],
+        ]);
+
+        $staff = User::create([
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'phone' => $validated['phone'],
+            'password' => Hash::make($validated['password']),
+            'role' => 'admin',
+            'admin_type' => 'staff',
+            'account_status' => 'active',
+            'preferred_language' => $validated['preferred_language'] ?? 'en',
+        ]);
+
+        return response()->json([
+            'message' => 'Staff account created successfully.',
+            'staff' => $staff,
+        ], 201);
+    }
+}
