@@ -23,7 +23,6 @@ class User extends Authenticatable implements JWTSubject
         'password',
         'phone',
         'role',
-        'admin_type',
         'account_status',
         'preferred_language',
     ];
@@ -85,7 +84,6 @@ class User extends Authenticatable implements JWTSubject
     {
         return [
             'role' => $this->role,
-            'admin_type' => $this->admin_type,
         ];
     }
 }

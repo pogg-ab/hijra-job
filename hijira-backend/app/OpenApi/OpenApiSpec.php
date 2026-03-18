@@ -87,11 +87,34 @@ class OpenApiSpec
      *                 @OA\Property(property="company_email", type="string", format="email"),
      *                 @OA\Property(property="company_phone", type="string"),
      *                 @OA\Property(property="country", type="string", example="UAE"),
-     *                 @OA\Property(property="license_file", type="string", format="binary")
+        *                 @OA\Property(property="license_file", type="string", format="binary")
      *             )
      *         )
      *     ),
-     *     @OA\Response(response=201, description="Partner registration submitted")
+        *     @OA\Response(
+        *         response=201,
+        *         description="Partner registration submitted",
+        *         @OA\MediaType(
+        *             mediaType="application/json",
+        *             @OA\Schema(
+        *                 type="object",
+        *                 @OA\Property(property="message", type="string", example="Partner registration received and pending super admin approval."),
+        *                 @OA\Property(property="agency", type="object")
+        *             )
+        *         )
+        *     ),
+        *     @OA\Response(
+        *         response=422,
+        *         description="Validation error",
+        *         @OA\MediaType(
+        *             mediaType="application/json",
+        *             @OA\Schema(
+        *                 type="object",
+        *                 @OA\Property(property="message", type="string", example="Validation failed"),
+        *                 @OA\Property(property="errors", type="object")
+        *             )
+        *         )
+        *     )
      * )
      */
     public function partnerRegisterDoc(): void {}
@@ -184,30 +207,30 @@ class OpenApiSpec
      */
     public function profileShowDoc(): void {}
 
-    /**
-     * @OA\Put(
-     *     path="/api/profile",
-     *     tags={"Profile"},
-     *     summary="Update own user/profile info",
-     *     security={{"bearerAuth":{}}},
-     *     @OA\RequestBody(
-     *         required=true,
-     *         @OA\JsonContent(
-     *             @OA\Property(property="name", type="string", example="Abel Tadesse"),
-     *             @OA\Property(property="phone", type="string", example="+251911223344"),
-     *             @OA\Property(property="preferred_language", type="string", example="en"),
-     *             @OA\Property(
-     *                 property="profile",
-     *                 type="object",
-     *                 @OA\Property(property="full_name", type="string", example="Abel Tadesse"),
-     *                 @OA\Property(property="education_level", type="string", example="Bachelor")
-     *             )
-     *         )
-     *     ),
-     *     @OA\Response(response=200, description="Updated")
-     * )
-     */
-    public function profileUpdateDoc(): void {}
+   /**
+    * @OA\Put(
+    *     path="/api/profile",
+    *     tags={"Profile"},
+    *     summary="Update own user/profile info",
+    *     security={{"bearerAuth":{}}},
+    *     @OA\RequestBody(
+    *         required=true,
+    *         @OA\JsonContent(
+    *             @OA\Property(property="name", type="string", example="Abel Tadesse"),
+    *             @OA\Property(property="phone", type="string", example="+251911223344"),
+    *             @OA\Property(property="preferred_language", type="string", example="en"),
+    *             @OA\Property(
+    *                 property="profile",
+    *                 type="object",
+    *                 @OA\Property(property="full_name", type="string", example="Abel Tadesse"),
+    *                 @OA\Property(property="education_level", type="string", example="Bachelor")
+    *             )
+    *         )
+    *     ),
+    *     @OA\Response(response=200, description="Updated")
+    * )
+    */
+   public function profileUpdateDoc(): void {}
 
     /**
      * @OA\Post(
@@ -298,6 +321,30 @@ class OpenApiSpec
      * )
      */
     public function adminStatsDoc(): void {}
+
+    /**
+     * @OA\Get(
+     *     path="/api/admin/roles",
+     *     tags={"Admin"},
+     *     summary="Get available roles and admin types",
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Response(response=200, description="Roles metadata")
+     * )
+     */
+    public function adminRolesDoc(): void {}
+
+    /**
+   * @OA\Get(
+   *     path="/api/admin/users",
+   *     tags={"Admin"},
+   *     summary="List users (paginated). Supports role filters",
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(name="role", in="query", required=false, @OA\Schema(type="string")),
+    *     
+     *     @OA\Response(response=200, description="Paginated users list")
+     * )
+     */
+    public function adminUsersDoc(): void {}
 
     /**
      * @OA\Post(

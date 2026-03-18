@@ -15,13 +15,15 @@ class IsAdmin
     {
         $user = $request->user();
 
-        if (! $user || $user->role !== 'admin') {
+        // Allow superadmin, staff, partner roles as admin users
+        if (! $user || ! in_array($user->role, ['superadmin', 'staff', 'partner'], true)) {
             return response()->json([
                 'message' => 'Forbidden. Admin access required.',
             ], 403);
         }
 
-        if (($user->admin_type === 'partner' || $user->admin_type === 'staff') && $user->account_status !== 'active') {
+        // staff and partner accounts must be active
+        if (in_array($user->role, ['staff', 'partner'], true) && $user->account_status !== 'active') {
             return response()->json([
                 'message' => 'Your admin account is pending approval or inactive.',
             ], 403);

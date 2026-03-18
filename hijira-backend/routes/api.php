@@ -37,6 +37,8 @@ Route::middleware('auth:api')->group(function () {
 
     Route::prefix('admin')->middleware('isAdmin')->group(function () {
         Route::get('/stats', [AdminController::class, 'stats']);
+        Route::get('/roles', [AdminController::class, 'roles']);
+        Route::get('/users', [AdminController::class, 'users']);
 
         Route::post('/jobs', [JobController::class, 'store']);
         Route::patch('/jobs/{job}', [JobController::class, 'update']);

@@ -177,7 +177,42 @@
                 },
                 "responses": {
                     "201": {
-                        "description": "Partner registration submitted"
+                        "description": "Partner registration submitted",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Partner registration received and pending super admin approval."
+                                        },
+                                        "agency": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Validation failed"
+                                        },
+                                        "errors": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -655,6 +690,54 @@
                     },
                     "403": {
                         "description": "Forbidden"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/roles": {
+            "get": {
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "Get available roles and admin types",
+                "operationId": "a2f3b5b9f3cf292c9aad4cf72cc14b74",
+                "responses": {
+                    "200": {
+                        "description": "Roles metadata"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/users": {
+            "get": {
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "List users (paginated). Supports role filters",
+                "operationId": "0e76bae529e11cd111c896ccfe0e93b3",
+                "parameters": [
+                    {
+                        "name": "role",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Paginated users list"
                     }
                 },
                 "security": [

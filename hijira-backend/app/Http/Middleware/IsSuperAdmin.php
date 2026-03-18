@@ -15,7 +15,7 @@ class IsSuperAdmin
     {
         $user = $request->user();
 
-        if (! $user || $user->role !== 'admin' || $user->admin_type !== 'super_admin') {
+        if (! $user || $user->role !== 'superadmin') {
             return response()->json([
                 'message' => 'Forbidden. Super Admin access required.',
             ], 403);

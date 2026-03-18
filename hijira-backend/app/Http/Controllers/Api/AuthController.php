@@ -80,7 +80,7 @@ class AuthController extends Controller
 
         $user = auth('api')->user();
 
-        if ($user->role === 'admin' && $user->account_status !== 'active') {
+        if (in_array($user->role, ['staff', 'partner'], true) && $user->account_status !== 'active') {
             auth('api')->logout();
             return response()->json([
                 'message' => 'Your account is pending approval or inactive.',
@@ -142,8 +142,7 @@ class AuthController extends Controller
                 'email' => $validated['email'],
                 'password' => $validated['password'],
                 'phone' => $validated['phone'],
-                'role' => 'admin',
-                'admin_type' => 'partner',
+                'role' => 'partner',
                 'account_status' => 'pending_approval',
                 'preferred_language' => 'en',
             ]);

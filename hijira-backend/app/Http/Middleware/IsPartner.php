@@ -15,7 +15,7 @@ class IsPartner
     {
         $user = $request->user();
 
-        if (! $user || $user->role !== 'admin' || $user->admin_type !== 'partner') {
+        if (! $user || $user->role !== 'partner') {
             return response()->json([
                 'message' => 'Forbidden. Partner access required.',
             ], 403);

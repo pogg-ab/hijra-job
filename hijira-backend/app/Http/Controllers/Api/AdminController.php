@@ -18,7 +18,7 @@ class AdminController extends Controller
         return response()->json([
             'total_users' => User::count(),
             'total_seekers' => User::where('role', 'seeker')->count(),
-            'total_partners' => User::where('role', 'admin')->where('admin_type', 'partner')->count(),
+            'total_partners' => User::where('role', 'partner')->count(),
             'pending_partner_approvals' => ForeignAgency::where('status', 'pending_approval')->count(),
             'total_jobs' => Job::count(),
             'pending_jobs' => Job::where('job_status', 'pending')->count(),
@@ -86,10 +86,12 @@ class AdminController extends Controller
 
     public function createStaff(Request $request)
     {
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
-            'phone' => ['required', 'regex:/^\+251[0-9]{9}$/'],
+            // accept either international (+251...) or local (starting with 0) phone formats
+            'phone' => ['required', 'string', 'max:20'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
             'preferred_language' => ['nullable', 'in:en,am,ar,or'],
         ]);
@@ -99,8 +101,8 @@ class AdminController extends Controller
             'email' => $validated['email'],
             'phone' => $validated['phone'],
             'password' => Hash::make($validated['password']),
-            'role' => 'admin',
-            'admin_type' => 'staff',
+            // use normalized role value 'staff' (not 'admin') so it matches enum and middleware checks
+            'role' => 'staff',
             'account_status' => 'active',
             'preferred_language' => $validated['preferred_language'] ?? 'en',
         ]);
@@ -109,5 +111,31 @@ class AdminController extends Controller
             'message' => 'Staff account created successfully.',
             'staff' => $staff,
         ], 201);
+    }
+
+    /**
+     * Return available role metadata for the system.
+     */
+    public function roles()
+    {
+        return response()->json([
+            'roles' => ['superadmin', 'staff', 'partner', 'seeker'],
+        ]);
+    }
+
+    /**
+     * List users (paginated). Supports filtering by `role`.
+     */
+    public function users(Request $request)
+    {
+        $query = User::query()->select('id', 'name', 'email', 'phone', 'role', 'account_status', 'preferred_language', 'created_at');
+
+        if ($request->filled('role')) {
+            $query->where('role', $request->string('role'));
+        }
+
+        // support filtering by role only now
+
+        return response()->json($query->latest()->paginate(20));
     }
 }
