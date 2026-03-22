@@ -119,14 +119,14 @@ class JobController extends Controller
 
         $job = Job::create([
             ...$validated,
-            'status' => 'closed',
-            'job_status' => 'pending',
+            'status' => 'published',
+            'job_status' => 'published',
             'created_by_user_id' => $user->id,
             'foreign_agency_id' => $agency->id,
         ]);
 
         return response()->json([
-            'message' => 'Job order submitted and pending staff publication.',
+            'message' => 'Job created and published.',
             'job' => $job,
         ], 201);
     }

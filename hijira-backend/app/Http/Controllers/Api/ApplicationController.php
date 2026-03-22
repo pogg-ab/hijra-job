@@ -23,37 +23,47 @@ class ApplicationController extends Controller
             ], 422);
         }
 
-        if ($job->is_high_level) {
-            $hasVerifiedDocuments = $request->user()
-                ->documents()
-                ->where('status', 'verified')
-                ->exists();
-
-            if (! $hasVerifiedDocuments) {
-                return response()->json([
-                    'message' => 'Verified documents are required before applying to high-level jobs.',
-                ], 422);
-            }
+        // If the job has a vacancies limit and it's already full, block apply
+        if ($job->vacancies_total > 0 && $job->vacancies_filled >= $job->vacancies_total) {
+            return response()->json([
+                'message' => 'No vacancies available for this job.',
+            ], 422);
         }
 
-        $application = Application::firstOrCreate(
-            [
-                'user_id' => $request->user()->id,
-                'job_id' => $job->id,
-            ],
-            [
-                'status' => 'applied',
-                'workflow_status' => 'applied',
-                'remarks' => null,
-            ]
-        );
+        // NOTE: Documents no longer carry a verification status for application gating.
+        // Applications are accepted regardless of document "status"; partners will
+        // receive applicant documents along with the application for review.
+
+        $validated = $request->validate([
+            'cover_letter' => ['nullable', 'string'],
+        ]);
+
+        // Prevent duplicate applications
+        $existing = Application::where('user_id', $request->user()->id)
+            ->where('job_id', $job->id)
+            ->first();
+
+        if ($existing) {
+            return response()->json([
+                'message' => 'You have already applied for this job.',
+            ], 409);
+        }
+
+        $application = Application::create([
+            'user_id' => $request->user()->id,
+            'job_id' => $job->id,
+            'status' => 'applied',
+            'workflow_status' => 'applied',
+            'remarks' => null,
+            'cover_letter' => $validated['cover_letter'] ?? null,
+        ]);
+
+        $application->load(['user.profile', 'user.documents', 'job']);
 
         return response()->json([
-            'message' => $application->wasRecentlyCreated
-                ? 'Application submitted successfully'
-                : 'You have already applied for this job',
+            'message' => 'Application submitted successfully',
             'application' => $application,
-        ], $application->wasRecentlyCreated ? 201 : 200);
+        ], 201);
     }
 
     public function myApplications(Request $request)
@@ -136,11 +146,11 @@ class ApplicationController extends Controller
             return response()->json(['message' => 'Approved agency profile not found.'], 404);
         }
 
-        $applications = Application::with(['user.profile', 'job'])
+        $applications = Application::with(['user.profile', 'user.documents', 'job'])
             ->whereHas('job', function ($jobQuery) use ($agency) {
                 $jobQuery->where('foreign_agency_id', $agency->id);
             })
-            ->whereIn('workflow_status', ['shortlisted', 'interview_requested', 'selected'])
+            ->whereIn('workflow_status', ['applied', 'shortlisted', 'interview_requested', 'selected'])
             ->latest()
             ->paginate(20);
 
@@ -158,21 +168,97 @@ class ApplicationController extends Controller
         }
 
         $validated = $request->validate([
-            'action' => ['required', 'in:request_interview,select_candidate'],
+            'action' => ['required', 'in:request_interview,select_candidate,shortlist,decline,accept_proposal,decline_proposal'],
             'remarks' => ['nullable', 'string'],
         ]);
 
-        $nextStatus = $validated['action'] === 'request_interview' ? 'interview_requested' : 'selected';
+        // Map partner actions to workflow statuses
+        // Map partner actions to workflow statuses or interview responses
+        $map = [
+            'request_interview' => 'interview_requested',
+            'select_candidate' => 'selected',
+            'shortlist' => 'shortlisted',
+            'decline' => 'rejected',
+        ];
+
+        // Handle accept/decline of a user's proposed rearrange
+        if (in_array($validated['action'], ['accept_proposal', 'decline_proposal'], true)) {
+            $application->update([
+                'interview_response' => $validated['action'] === 'accept_proposal' ? 'accepted' : 'partner_declined',
+                'remarks' => $validated['remarks'] ?? $application->remarks,
+            ]);
+
+            // keep workflow_status as interview_requested when partner responds to proposal
+            $this->workflowService->notifyStatusChange($application);
+
+            return response()->json([
+                'message' => 'Partner response recorded',
+                'application' => $application->fresh(['user:id,name,email', 'job:id,title']),
+            ]);
+        }
+
+        $nextStatus = $map[$validated['action']] ?? $application->workflow_status;
 
         $application->update([
             'workflow_status' => $nextStatus,
             'remarks' => $validated['remarks'] ?? $application->remarks,
         ]);
 
+        // if partner requested an interview with datetime, save it
+        if ($validated['action'] === 'request_interview' && $request->filled('interview_datetime')) {
+            $application->update([
+                'interview_datetime' => $request->input('interview_datetime'),
+                'interview_response' => 'pending',
+            ]);
+        }
+
         $this->workflowService->notifyStatusChange($application);
+        // Refresh job vacancy counters if the workflow status may affect vacancies
+        $this->workflowService->refreshJobVacancyState($application);
 
         return response()->json([
             'message' => 'Partner action recorded',
+            'application' => $application->fresh(['user:id,name,email', 'job:id,title']),
+        ]);
+    }
+
+    // Allow applicant to respond to an interview request
+    public function respond(Request $request, Application $application)
+    {
+        // only the applicant may respond
+        if ($request->user()->id !== $application->user_id) {
+            return response()->json(['message' => 'Not allowed'], 403);
+        }
+
+        $validated = $request->validate([
+            'action' => ['required', 'in:accept,rearrange'],
+            'new_datetime' => ['nullable', 'date'],
+            'remarks' => ['nullable', 'string'],
+        ]);
+
+        if ($validated['action'] === 'accept') {
+            $application->update([
+                'interview_response' => 'accepted',
+                'remarks' => $validated['remarks'] ?? $application->remarks,
+            ]);
+        } else {
+            // rearrange
+            if (! $validated['new_datetime']) {
+                return response()->json(['message' => 'new_datetime is required for rearrange'], 422);
+            }
+
+            $application->update([
+                'interview_response' => 'rearrange_requested',
+                'interview_datetime' => $validated['new_datetime'],
+                'remarks' => $validated['remarks'] ?? $application->remarks,
+            ]);
+        }
+
+        // notify partner
+        $this->workflowService->notifyStatusChange($application);
+
+        return response()->json([
+            'message' => 'Response recorded',
             'application' => $application->fresh(['user:id,name,email', 'job:id,title']),
         ]);
     }

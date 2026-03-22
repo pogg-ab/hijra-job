@@ -1,8 +1,9 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
+import { getAccessToken, clearAuth, Auth, Services } from '@/lib/api'
 import { useTranslation } from 'react-i18next'
 import { AppLanguage } from '@/lib/i18n'
 import { useLanguage } from '@/components/language-provider'
@@ -19,6 +20,53 @@ const Navbar: React.FC = () => {
     { label: t('nav.contact'), href: '/Contact' },
   ]
 
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false)
+  const [isPartnerUser, setIsPartnerUser] = useState<boolean>(false)
+  const [servicesList, setServicesList] = useState<any[]>([])
+
+  useEffect(() => {
+    // determine auth client-side only to keep server/client HTML stable
+    try {
+      const hasToken = !!getAccessToken()
+      setIsAuthenticated(hasToken)
+
+      if (hasToken) {
+        let mounted = true
+        ;(async () => {
+          try {
+            const me = await Auth.me()
+            const role = me?.user?.role ?? me?.role ?? null
+            if (!mounted) return
+            setIsPartnerUser(role === 'partner' || role === 'agency')
+          } catch {
+            // on failure (401/invalid token) clear auth state
+            try { clearAuth() } catch {}
+            setIsAuthenticated(false)
+            setIsPartnerUser(false)
+          }
+        })()
+
+        return () => { mounted = false }
+      }
+    } catch {
+      setIsAuthenticated(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    let mounted = true
+    ;(async () => {
+      try {
+        const res = await Services.list()
+        const list = Array.isArray(res) ? res : (res.data ?? [])
+        if (mounted) setServicesList(list)
+      } catch {
+        // ignore
+      }
+    })()
+    return () => { mounted = false }
+  }, [])
+
   return (
     <nav className="bg-card border-b border-border sticky top-0 z-50 shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -33,13 +81,46 @@ const Navbar: React.FC = () => {
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center gap-1">
-            {links.map((link) => (
-              <Link key={link.href} href={link.href}>
-                <Button variant="ghost" className="text-foreground hover:text-primary hover:bg-primary/5">
-                  {link.label}
-                </Button>
-              </Link>
-            ))}
+            {links.map((link, idx) => {
+              const href = idx === 0 && isAuthenticated ? '/Dashboard' : link.href
+              const label = idx === 0 && isAuthenticated ? 'Dashboard' : link.label
+              // Render Services as a dropdown if services exist
+              if (link.href === '/Services') {
+                return (
+                  <div key={href + idx} className="relative group">
+                    <Link href={href}>
+                      <Button variant="ghost" className="text-foreground hover:text-primary hover:bg-primary/5">{label}</Button>
+                    </Link>
+                    {servicesList.length > 0 && (
+                      <div className="absolute left-0 mt-2 w-56 bg-card border border-border rounded shadow-md z-40 hidden group-hover:block">
+                        <div className="py-2">
+                          {servicesList.map(s => (
+                            <Link key={s.id} href={`/Services#${s.slug ?? s.id}`} className="block px-4 py-2 text-sm text-foreground hover:bg-primary/5">{s.title}</Link>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )
+              }
+
+              return (
+                <div key={href + idx} className="flex items-center gap-1">
+                  <Link href={href}>
+                    <Button variant="ghost" className="text-foreground hover:text-primary hover:bg-primary/5">
+                      {label}
+                    </Button>
+                  </Link>
+                  {/* Insert Applications next to Jobs for partner users */}
+                  {link.href === '/Jobs' && isPartnerUser && (
+                    <Link href="/Partner">
+                      <Button variant="ghost" className="text-foreground hover:text-primary hover:bg-primary/5">Applications</Button>
+                    </Link>
+                  )}
+                </div>
+              )
+            })}
+            {/* partner/register links hidden for guests per request */}
           </div>
 
           {/* Auth Buttons */}
@@ -56,16 +137,40 @@ const Navbar: React.FC = () => {
               <option value="or">OR</option>
             </select>
 
-            <Link href="/Login" className="hidden sm:block">
-              <Button variant="outline" className="border-primary/20 text-primary hover:bg-primary/5 hover:border-primary/40">
-                {t('nav.login')}
-              </Button>
-            </Link>
-            <Link href="/RegisterMultiStep">
-              <Button className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold">
-                {t('nav.signup')}
-              </Button>
-            </Link>
+            {isAuthenticated ? (
+              <>
+                <Link href="/Profile">
+                  <Button variant="ghost" className="text-foreground hover:text-primary hover:bg-primary/5" aria-label="Profile">
+                    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                      <path d="M12 12c2.761 0 5-2.239 5-5s-2.239-5-5-5-5 2.239-5 5 2.239 5 5 5zM12 14c-4.418 0-8 2.239-8 5v1h16v-1c0-2.761-3.582-5-8-5z" />
+                    </svg>
+                  </Button>
+                </Link>
+                <Button
+                  variant="outline"
+                  onClick={async () => {
+                    try {
+                      await Auth.logout()
+                    } catch {
+                      // ignore
+                    }
+                    clearAuth()
+                    window.location.href = '/Login'
+                  }}
+                  className="border-primary/20 text-primary hover:bg-primary/5 hover:border-primary/40"
+                >
+                  Logout
+                </Button>
+              </>
+            ) : (
+              <>
+                <Link href="/Login" className="hidden sm:block">
+                  <Button variant="outline" className="border-primary/20 text-primary hover:bg-primary/5 hover:border-primary/40">
+                    {t('nav.login')}
+                  </Button>
+                </Link>
+              </>
+            )}
 
             {/* Mobile Menu Button */}
             <button
@@ -81,20 +186,57 @@ const Navbar: React.FC = () => {
         </div>
 
         {/* Mobile Navigation */}
-        {isOpen && (
+            {isOpen && (
           <div className="md:hidden border-t border-border pb-4">
-            {links.map((link) => (
-              <Link key={link.href} href={link.href}>
-                <Button variant="ghost" className="w-full justify-start text-foreground hover:text-primary hover:bg-primary/5">
-                  {link.label}
-                </Button>
-              </Link>
-            ))}
-            <Link href="/Login" className="block mt-2">
-              <Button variant="outline" className="w-full border-primary/20 text-primary hover:bg-primary/5">
-                {t('nav.login')}
-              </Button>
-            </Link>
+            {links.map((link, idx) => {
+              const href = idx === 0 && isAuthenticated ? '/Dashboard' : link.href
+              const label = idx === 0 && isAuthenticated ? 'Dashboard' : link.label
+              return (
+                <div key={href + idx}>
+                  <Link href={href}>
+                    <Button variant="ghost" className="w-full justify-start text-foreground hover:text-primary hover:bg-primary/5">
+                      {label}
+                    </Button>
+                  </Link>
+                  {link.href === '/Jobs' && isPartnerUser && (
+                    <Link href="/Partner">
+                      <Button variant="ghost" className="w-full justify-start text-foreground hover:text-primary hover:bg-primary/5">Applications</Button>
+                    </Link>
+                  )}
+                </div>
+              )
+            })}
+
+            {isAuthenticated ? (
+              <>
+                <Link href="/Profile" className="block mt-2">
+                  <Button variant="outline" className="w-full border-primary/20 text-primary hover:bg-primary/5">Profile</Button>
+                </Link>
+                {isPartnerUser && (
+                  <Link href="/Partner" className="block mt-2">
+                    <Button variant="outline" className="w-full border-primary/20 text-primary hover:bg-primary/5">Applications</Button>
+                  </Link>
+                )}
+                <button
+                  onClick={async () => {
+                    try { await Auth.logout() } catch {}
+                    clearAuth()
+                    window.location.href = '/Login'
+                  }}
+                  className="block mt-2 w-full text-left"
+                >
+                  <Button variant="outline" className="w-full border-primary/20 text-primary hover:bg-primary/5">Logout</Button>
+                </button>
+              </>
+            ) : (
+              <>
+                <Link href="/Login" className="block mt-2">
+                  <Button variant="outline" className="w-full border-primary/20 text-primary hover:bg-primary/5">
+                    {t('nav.login')}
+                  </Button>
+                </Link>
+              </>
+            )}
           </div>
         )}
       </div>

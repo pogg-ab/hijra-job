@@ -17,11 +17,15 @@ class Application extends Model
         'hired_at',
         'placed_at',
         'remarks',
+        'cover_letter',
+        'interview_datetime',
+        'interview_response',
     ];
 
     protected $casts = [
         'hired_at' => 'datetime',
         'placed_at' => 'datetime',
+        'interview_datetime' => 'datetime',
     ];
 
     public function user()

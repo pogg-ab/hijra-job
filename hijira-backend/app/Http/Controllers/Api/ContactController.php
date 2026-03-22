@@ -37,6 +37,21 @@ class ContactController extends Controller
         ], 201);
     }
 
+    public function myContacts(Request $request)
+    {
+        $user = $request->user();
+        if (!$user) {
+            return response()->json(['message' => 'Unauthenticated'], 401);
+        }
+
+        $contacts = Contact::where('email', $user->email)
+            ->with('replies')
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return response()->json(['data' => $contacts]);
+    }
+
     private function sendSmsPlaceholder(string $message): void
     {
         Log::info('SMS placeholder invoked', [

@@ -1,83 +1,113 @@
-'use client'
+ 'use client'
 
-import React from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
+import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
+import { Profile, Partner } from '@/lib/api'
 
 const DashboardPage: React.FC = () => {
-  const stats = [
-    {
-      label: 'Active Applications',
-      value: '3',
-      icon: '📋',
-      color: 'from-blue-500 to-blue-600',
-      bgColor: 'bg-blue-50 dark:bg-blue-950'
-    },
-    {
-      label: 'Verified Documents',
-      value: '2 of 5',
-      icon: '✅',
-      color: 'from-green-500 to-green-600',
-      bgColor: 'bg-green-50 dark:bg-green-950'
-    },
-    {
-      label: 'Messages',
-      value: '1',
-      icon: '💬',
-      color: 'from-purple-500 to-purple-600',
-      bgColor: 'bg-purple-50 dark:bg-purple-950'
-    },
-    {
-      label: 'Profile Completeness',
-      value: '85%',
-      icon: '📊',
-      color: 'from-orange-500 to-orange-600',
-      bgColor: 'bg-orange-50 dark:bg-orange-950'
-    }
-  ]
+  const [user, setUser] = useState<any | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [openRearrangeId, setOpenRearrangeId] = useState<number | null>(null)
+  const [partnerApplicants, setPartnerApplicants] = useState<any[]>([])
+  const { t } = useTranslation()
 
-  const applications = [
-    {
-      id: 1,
-      title: 'Housekeeping Manager',
-      company: 'Premium Hotel Group',
-      country: 'Germany',
-      status: 'Pending',
-      statusColor: 'badge-pending',
-      appliedDate: 'Mar 10, 2025',
-      lastUpdate: '2 days ago'
-    },
-    {
-      id: 2,
-      title: 'Home Nurse',
-      company: 'Al-Noor Healthcare',
-      country: 'Saudi Arabia',
-      status: 'Interview',
-      statusColor: 'badge-interview',
-      appliedDate: 'Mar 5, 2025',
-      lastUpdate: '1 day ago'
-    },
-    {
-      id: 3,
-      title: 'Care Worker',
-      company: 'Nordic Care Services',
-      country: 'Norway',
-      status: 'Pending',
-      statusColor: 'badge-pending',
-      appliedDate: 'Mar 1, 2025',
-      lastUpdate: '5 days ago'
+  useEffect(() => {
+    let mounted = true
+    async function loadProfile() {
+      setLoading(true)
+      setError(null)
+      try {
+        const data = await Profile.get()
+        if (mounted) setUser(data)
+        // if partner, also load partner applications/shortlisted
+        try {
+          const role = data?.role ?? data?.profile?.role ?? null
+          const isPartner = role === 'partner' || role === 'agency' || data?.is_partner || data?.profile?.is_partner
+          if (isPartner) {
+            const apps = await Partner.shortlisted()
+            if (mounted) setPartnerApplicants(Array.isArray(apps) ? apps : (apps.data ?? []))
+          }
+        } catch (e) {
+          // ignore partner fetch errors
+        }
+      } catch (err: any) {
+        if (mounted) setError(err?.message ?? 'Failed to load profile')
+      } finally {
+        if (mounted) setLoading(false)
+      }
     }
-  ]
 
-  const documents = [
-    { name: 'Passport', status: 'Verified', icon: '🛂' },
-    { name: 'CV', status: 'Verified', icon: '📄' },
-    { name: 'Degree Certificate', status: 'Pending', icon: '🎓' },
-    { name: 'Work Experience Letter', status: 'Not Uploaded', icon: '📋' },
-    { name: 'Health Certificate', status: 'Not Uploaded', icon: '⚕️' },
-  ]
+    loadProfile()
+    return () => { mounted = false }
+  }, [])
+
+  const documents = useMemo(() => {
+    if (!user) return []
+    const list = Array.isArray(user.documents)
+      ? user.documents
+      : (Array.isArray(user.documents?.data) ? user.documents.data : (Array.isArray(user.profile?.documents) ? user.profile.documents : (Array.isArray(user.profile?.documents?.data) ? user.profile.documents.data : [])))
+
+    return list.map((d: any) => ({
+      name: d.document_type ?? d.name ?? 'Document',
+      status: d.status ?? 'Not Uploaded',
+      icon: d.document_type === 'Passport' ? '🛂' : '📄'
+    }))
+  }, [user])
+
+  const applications = useMemo(() => {
+    if (!user) return []
+    const apps = Array.isArray(user.applications) ? user.applications : (user.applications?.data ?? [])
+    return apps.map((a: any) => {
+      const job = a.job ?? {}
+      const title = typeof job.title === 'string'
+        ? job.title
+        : Array.isArray(job.title) ? job.title[0] : (job.title && Object.values(job.title)[0]) || 'Job'
+
+      return {
+        raw: a,
+        id: a.id,
+        title,
+        company: job.company_name ?? job.foreign_agency?.name ?? job.created_by_user_id ?? '',
+        country: job.country ?? '',
+        status: a.workflow_status ?? a.status ?? 'Pending',
+        statusColor: a.workflow_status === 'interview_requested' ? 'badge-interview' : (a.workflow_status === 'shortlisted' ? 'badge-shortlisted' : 'badge-pending'),
+        appliedDate: a.created_at ? new Date(a.created_at).toLocaleDateString() : '',
+        lastUpdate: a.updated_at ? 'Updated' : '',
+        coverLetter: a.cover_letter ?? null,
+        interviewDatetime: a.interview_datetime ? new Date(a.interview_datetime) : null,
+        interviewResponse: a.interview_response ?? null,
+      }
+    })
+  }, [user])
+
+  const stats = useMemo(() => {
+    const totalDocs = documents.length
+    const verifiedDocs = documents.filter((d: any) => d.status === 'verified').length
+    const role = user?.role ?? user?.profile?.role ?? null
+    const isPartner = role === 'partner' || role === 'agency' || user?.is_partner || user?.profile?.is_partner
+
+    if (isPartner) {
+      const activeApplicants = partnerApplicants.length
+      return [
+        { label: 'Active Applicants', value: String(activeApplicants), icon: '📋', color: 'from-blue-500 to-blue-600', bgColor: 'bg-blue-50 dark:bg-blue-950' },
+        { label: 'Verified Documents', value: `${verifiedDocs} of ${totalDocs}`, icon: '✅', color: 'from-green-500 to-green-600', bgColor: 'bg-green-50 dark:bg-green-950' },
+        { label: 'Messages', value: '0', icon: '💬', color: 'from-purple-500 to-purple-600', bgColor: 'bg-purple-50 dark:bg-purple-950' }
+      ]
+    }
+
+    const activeApplications = applications.length
+    const profileCompleteness = user?.profile?.completeness ?? Math.round((verifiedDocs / Math.max(totalDocs, 1)) * 100)
+    return [
+      { label: 'Active Applications', value: String(activeApplications), icon: '📋', color: 'from-blue-500 to-blue-600', bgColor: 'bg-blue-50 dark:bg-blue-950' },
+      { label: 'Verified Documents', value: `${verifiedDocs} of ${totalDocs}`, icon: '✅', color: 'from-green-500 to-green-600', bgColor: 'bg-green-50 dark:bg-green-950' },
+      { label: 'Messages', value: '0', icon: '💬', color: 'from-purple-500 to-purple-600', bgColor: 'bg-purple-50 dark:bg-purple-950' }
+    ]
+  }, [applications, documents, user, partnerApplicants])
 
   return (
     <main className="min-h-screen flex flex-col bg-background">
@@ -87,12 +117,9 @@ const DashboardPage: React.FC = () => {
       <section className="bg-gradient-to-br from-primary/10 to-secondary/10 border-b border-border px-4 py-8">
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center justify-between mb-2">
-            <h1 className="text-3xl md:text-4xl font-bold text-foreground">Welcome back, Abeba</h1>
-            <Link href="#settings">
-              <Button variant="outline" className="border-primary/20 text-foreground hover:bg-primary/5">
-                ⚙️ Settings
-              </Button>
-            </Link>
+            <h1 className="text-3xl md:text-4xl font-bold text-foreground">{
+              loading ? t('dashboard.welcome_back') : `${t('dashboard.welcome_back')}, ${user?.profile?.full_name ?? user?.name ?? 'User'}`
+            }</h1>
           </div>
           <p className="text-foreground/60">Here's an overview of your job search progress</p>
         </div>
@@ -141,16 +168,50 @@ const DashboardPage: React.FC = () => {
                   
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between pt-3 border-t border-border/50">
                     <div className="text-xs text-foreground/60 mb-3 sm:mb-0">
-                      <p>Applied: <span className="font-medium">{app.appliedDate}</span></p>
-                      <p>Last update: <span className="font-medium">{app.lastUpdate}</span></p>
+                      <p>{t('dashboard.applied')}: <span className="font-medium">{app.appliedDate}</span></p>
+                      <p>{t('dashboard.last_update')}: <span className="font-medium">{app.lastUpdate}</span></p>
                     </div>
-                    <div className="flex gap-2">
-                      <Button variant="outline" className="text-sm border-primary/20 hover:bg-primary/5">
-                        View Details
-                      </Button>
-                      <Button variant="outline" className="text-sm border-primary/20 hover:bg-primary/5">
-                        Message
-                      </Button>
+                    <div className="flex gap-2 flex-wrap items-center">
+                      <Link href={`/Jobs/${app.raw?.job?.id ?? app.id}`}>
+                        <Button variant="outline" className="text-sm border-primary/20 hover:bg-primary/5">
+                          {t('dashboard.view_details')}
+                        </Button>
+                      </Link>
+                      {app.status === 'interview_requested' && app.interviewDatetime && (
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <div className="text-sm">Interview: <span className="font-medium">{app.interviewDatetime.toLocaleString()}</span></div>
+                          <Button onClick={async () => {
+                            // accept
+                            try {
+                              await (await import('@/lib/api')).Applications.respond(app.id, { action: 'accept' })
+                              location.reload()
+                            } catch (e) { console.error(e) }
+                          }} className="bg-green-600 text-white">{t('dashboard.accept')}</Button>
+                          {/* disable rearrange if applicant already requested rearrange and waiting for partner */}
+                          <Button onClick={() => setOpenRearrangeId(openRearrangeId === app.id ? null : app.id)} variant="outline" className="bg-yellow-400" disabled={app.interviewResponse === 'rearrange_requested'}>{t('dashboard.ask_rearrange')}</Button>
+
+                          {openRearrangeId === app.id && app.interviewResponse !== 'rearrange_requested' && (
+                            <div className="mt-2 sm:mt-0 sm:flex sm:items-center sm:gap-2 w-full sm:w-auto z-10">
+                              <input
+                                id={`rearrange-input-${app.id}`}
+                                type="datetime-local"
+                                className="px-2 py-1 border rounded mr-2 w-full sm:w-auto"
+                                aria-label="Propose new interview date and time"
+                              />
+                              <Button onClick={async () => {
+                                const v = (document.getElementById(`rearrange-input-${app.id}`) as HTMLInputElement).value
+                                if (!v) return alert(t('dashboard.enter_datetime'))
+                                const iso = new Date(v)
+                                if (isNaN(iso.getTime())) return alert(t('dashboard.invalid_datetime'))
+                                try {
+                                  await (await import('@/lib/api')).Applications.respond(app.id, { action: 'rearrange', new_datetime: iso.toISOString() })
+                                  location.reload()
+                                } catch (e) { console.error(e) }
+                              }} className="ml-2">{t('dashboard.send_proposal')}</Button>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>

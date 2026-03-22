@@ -84,7 +84,7 @@ class WorkflowService
         $job = $application->job;
 
         $filledCount = $job->applications()
-            ->whereIn('workflow_status', ['hired', 'placed'])
+            ->whereIn('workflow_status', ['selected', 'hired', 'placed'])
             ->count();
 
         $job->vacancies_filled = $filledCount;

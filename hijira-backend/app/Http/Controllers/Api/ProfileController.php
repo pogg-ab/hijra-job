@@ -18,7 +18,7 @@ class ProfileController extends Controller
     {
         $validated = $request->validate([
             'name' => ['sometimes', 'string', 'max:255'],
-            'phone' => ['sometimes', 'regex:/^\+251[0-9]{9}$/'],
+            'phone' => ['sometimes', 'regex:/^(\\+251|0)[0-9]{9}$/'],
             'preferred_language' => ['sometimes', 'in:en,am,ar,or'],
             'profile.full_name' => ['sometimes', 'string', 'max:255'],
             'profile.gender' => ['nullable', 'string', 'max:20'],

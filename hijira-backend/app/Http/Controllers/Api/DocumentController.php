@@ -64,6 +64,48 @@ class DocumentController extends Controller
         ]);
     }
 
+    // Allow owner to update document metadata (e.g., document_type)
+    public function update(Request $request, Document $document)
+    {
+        // ensure the authenticated user owns the document
+        if ($request->user()->id !== $document->user_id) {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+
+        $validated = $request->validate([
+            'document_type' => ['required', 'in:Passport,ID,Certificate'],
+        ]);
+
+        $document->update([
+            'document_type' => $validated['document_type'],
+        ]);
+
+        return response()->json([
+            'message' => 'Document updated',
+            'document' => $document,
+        ]);
+    }
+
+    // Allow owner to delete their document and remove file
+    public function destroy(Request $request, Document $document)
+    {
+        if ($request->user()->id !== $document->user_id) {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+
+        // delete file if exists
+        if (
+            $document->file_path &&
+            \Illuminate\Support\Facades\Storage::disk('private')->exists($document->file_path)
+        ) {
+            \Illuminate\Support\Facades\Storage::disk('private')->delete($document->file_path);
+        }
+
+        $document->delete();
+
+        return response()->json(['message' => 'Document deleted']);
+    }
+
     public function download(Document $document)
     {
         if (! Storage::disk('private')->exists($document->file_path)) {
@@ -72,12 +114,19 @@ class DocumentController extends Controller
 
         $stream = Storage::disk('private')->readStream($document->file_path);
         $filename = basename($document->file_path);
+        $mime = Storage::disk('private')->mimeType($document->file_path) ?? 'application/octet-stream';
 
-        return response()->streamDownload(function () use ($stream) {
+        $headers = [
+            'Content-Type' => $mime,
+            'Content-Disposition' => 'inline; filename="' . $filename . '"',
+            'Cache-Control' => 'private, must-revalidate',
+        ];
+
+        return response()->stream(function () use ($stream) {
             fpassthru($stream);
             if (is_resource($stream)) {
                 fclose($stream);
             }
-        }, $filename);
+        }, 200, $headers);
     }
 }

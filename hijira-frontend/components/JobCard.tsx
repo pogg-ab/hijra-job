@@ -2,18 +2,20 @@
 
 import React from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { getAccessToken } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 
 interface JobCardProps {
-  id: string
-  title: string
-  company: string
-  location: string
-  country: string
+  id: string | number
+  title: any
+  company?: string
+  location?: string
+  country?: string
   salary?: string
-  type: 'Full-time' | 'Part-time' | 'Contract'
-  description: string
-  requirements: string[]
+  type?: 'Full-time' | 'Part-time' | 'Contract' | string
+  description?: any
+  requirements?: string[] | null
   posted?: string
 }
 
@@ -24,10 +26,25 @@ const JobCard: React.FC<JobCardProps> = ({
   location,
   country,
   salary,
-  type,
+  type = 'Full-time',
   description,
   requirements,
 }) => {
+  const displayTitle = (() => {
+    if (!title) return ''
+    if (typeof title === 'string') return title
+    if (typeof title === 'object') return title.en ?? Object.values(title)[0] ?? ''
+    return String(title)
+  })()
+
+  const displayDescription = (() => {
+    if (!description) return ''
+    if (typeof description === 'string') return description
+    if (typeof description === 'object') return description.en ?? Object.values(description)[0] ?? ''
+    return String(description)
+  })()
+
+  const reqs = Array.isArray(requirements) ? requirements : []
   const getTypeColor = (type: string) => {
     switch (type) {
       case 'Full-time':
@@ -49,10 +66,10 @@ const JobCard: React.FC<JobCardProps> = ({
           <div className="flex-1">
             <Link href={`/Jobs/${id}`}>
               <h3 className="text-xl font-bold text-foreground group-hover:text-primary transition cursor-pointer">
-                {title}
+                {displayTitle}
               </h3>
             </Link>
-            <p className="text-foreground/60 font-medium">{company}</p>
+            <p className="text-foreground/60 font-medium">{company ?? ''}</p>
           </div>
           <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${getTypeColor(type)}`}>
             {type}
@@ -81,34 +98,53 @@ const JobCard: React.FC<JobCardProps> = ({
 
       {/* Description */}
       <p className="text-foreground/70 text-sm leading-relaxed mb-4 line-clamp-2">
-        {description}
+        {displayDescription}
       </p>
 
       {/* Requirements */}
       <div className="mb-6">
         <p className="text-xs font-semibold text-foreground/60 mb-2 uppercase tracking-wide">Requirements</p>
         <div className="flex flex-wrap gap-2">
-          {requirements.slice(0, 3).map((req, idx) => (
+          {reqs.slice(0, 3).map((req, idx) => (
             <span key={idx} className="inline-block bg-secondary/50 text-secondary-foreground text-xs px-2.5 py-1 rounded-full">
               {req}
             </span>
           ))}
-          {requirements.length > 3 && (
+          {reqs.length > 3 && (
             <span className="inline-block text-xs text-foreground/60 px-2.5 py-1">
-              +{requirements.length - 3} more
+              +{reqs.length - 3} more
             </span>
           )}
         </div>
       </div>
 
       {/* Apply Button */}
-      <Link href={`/Jobs/${id}`} className="block">
-        <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold">
-          View Job & Apply
-        </Button>
-      </Link>
+      <div className="block">
+        <ApplyButton id={id} />
+      </div>
     </div>
   )
 }
-
 export default JobCard
+
+function ApplyButton({ id }: { id: string | number }) {
+  const router = useRouter()
+
+  function handleClick() {
+    const token = getAccessToken()
+    if (!token) {
+      router.push(`/Login?next=/Jobs/${id}`)
+      return
+    }
+    router.push(`/Jobs/${id}`)
+  }
+
+  return (
+    <button
+      onClick={handleClick}
+      className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold inline-block py-2 px-4 rounded"
+    >
+      View Job & Apply
+    </button>
+  )
+}

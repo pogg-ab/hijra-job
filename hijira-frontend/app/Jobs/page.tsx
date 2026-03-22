@@ -1,92 +1,86 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
 import JobCard from '@/components/JobCard'
 import { Button } from '@/components/ui/button'
+import { Jobs, Auth } from '@/lib/api'
+import Link from 'next/link'
 
 const JobsPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCountry, setSelectedCountry] = useState('All')
   const [selectedType, setSelectedType] = useState('All')
 
-  // Mock job data
-  const jobs = [
-    {
-      id: '1',
-      title: 'Housekeeping Manager',
-      company: 'Premium Hotel Group',
-      location: 'Munich',
-      country: 'Germany',
-      salary: '$1,800 - $2,200/month',
-      type: 'Full-time' as const,
-      description: 'Manage housekeeping operations at a luxury 5-star hotel. Lead a team of 15+ staff members.',
-      requirements: ['Hotel Management', 'Team Leadership', 'German Language']
-    },
-    {
-      id: '2',
-      title: 'Home Nurse',
-      company: 'Al-Noor Healthcare',
-      location: 'Riyadh',
-      country: 'Saudi Arabia',
-      salary: '$2,000 - $2,800/month',
-      type: 'Full-time' as const,
-      description: 'Provide in-home nursing care to elderly clients. Flexible shifts available.',
-      requirements: ['Nursing License', 'Patient Care', 'Arabic Language']
-    },
-    {
-      id: '3',
-      title: 'Software Engineer',
-      company: 'Tech Solutions Asia',
-      location: 'Singapore',
-      country: 'Singapore',
-      salary: '$2,500 - $3,500/month',
-      type: 'Full-time' as const,
-      description: 'Join our dynamic team building innovative solutions for fintech applications.',
-      requirements: ['JavaScript', 'React', 'Node.js']
-    },
-    {
-      id: '4',
-      title: 'Hospitality Consultant',
-      company: 'Dubai Resorts',
-      location: 'Dubai',
-      country: 'UAE',
-      salary: '$1,900 - $2,400/month',
-      type: 'Full-time' as const,
-      description: 'Consult with international guests and provide premium hospitality services.',
-      requirements: ['Customer Service', 'English', 'Multi-lingual']
-    },
-    {
-      id: '5',
-      title: 'Construction Supervisor',
-      company: 'BuildRight Construction',
-      location: 'London',
-      country: 'UK',
-      salary: '$2,100 - $2,700/month',
-      type: 'Full-time' as const,
-      description: 'Oversee construction teams on major infrastructure projects.',
-      requirements: ['Construction Management', 'Safety Certification', 'Leadership']
-    },
-    {
-      id: '6',
-      title: 'Care Worker',
-      company: 'Nordic Care Services',
-      location: 'Oslo',
-      country: 'Norway',
-      salary: '$2,300 - $3,000/month',
-      type: 'Full-time' as const,
-      description: 'Provide compassionate care to individuals with various needs.',
-      requirements: ['Care Experience', 'Compassion', 'Physical Fitness']
-    },
-  ]
+  type Job = {
+    id: string | number
+    title: string
+    company?: string
+    location?: string
+    country?: string
+    salary?: string
+    type?: string
+    description?: string
+    requirements?: string[]
+  }
 
-  const countries = ['All', ...new Set(jobs.map(j => j.country))]
+  const [jobs, setJobs] = useState<Job[]>([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [profile, setProfile] = useState<any | null>(null)
+
   const types = ['All', 'Full-time', 'Part-time', 'Contract']
 
-  const filteredJobs = jobs.filter(job => {
-    const matchesSearch = job.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         job.company.toLowerCase().includes(searchQuery.toLowerCase())
+  const sourceJobs = Array.isArray(jobs) ? jobs : []
+
+  const countries = useMemo(() => {
+    const list = sourceJobs.map(j => j.country).filter(Boolean) as string[]
+    return ['All', ...Array.from(new Set(list))]
+  }, [sourceJobs])
+
+  useEffect(() => {
+    let mounted = true
+    async function loadProfile() {
+      try {
+        const p = await Auth.me()
+        if (mounted) setProfile(p)
+      } catch (e) {
+        // ignore - user not logged in
+      }
+    }
+    loadProfile()
+    async function loadJobs() {
+      setLoading(true)
+      setError(null)
+      try {
+        const data = await Jobs.list()
+        if (mounted) setJobs(data || [])
+      } catch (err: any) {
+        setError(err?.message ?? 'Failed to load jobs')
+      } finally {
+        if (mounted) setLoading(false)
+      }
+    }
+
+    loadJobs()
+    return () => {
+      mounted = false
+    }
+  }, [])
+
+  const filteredJobs = sourceJobs.filter(job => {
+    const getTitleText = (j: any) => {
+      const t = j?.title
+      if (!t) return ''
+      if (typeof t === 'string') return t
+      if (typeof t === 'object') return (t.en ?? Object.values(t)[0] ?? '')
+      return String(t)
+    }
+
+    const titleText = getTitleText(job)
+    const matchesSearch = titleText.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         (job.company || '').toLowerCase().includes(searchQuery.toLowerCase())
     const matchesCountry = selectedCountry === 'All' || job.country === selectedCountry
     const matchesType = selectedType === 'All' || job.type === selectedType
     return matchesSearch && matchesCountry && matchesType
@@ -153,9 +147,30 @@ const JobsPage: React.FC = () => {
         {/* Results Count */}
         <div className="mb-6">
           <p className="text-sm text-foreground/60">
-            Showing <span className="font-semibold text-foreground">{filteredJobs.length}</span> of <span className="font-semibold text-foreground">{jobs.length}</span> jobs
+            {loading ? 'Loading jobs...' : error ? `Error: ${error}` : (
+              <>Showing <span className="font-semibold text-foreground">{filteredJobs.length}</span> of <span className="font-semibold text-foreground">{jobs.length}</span> jobs</>
+            )}
           </p>
         </div>
+
+        {/* Partner action: Post Job */}
+        {(() => {
+          const isPartner = (() => {
+            if (!profile) return false
+            const role = (profile.role || profile.type || profile.account_type || '').toString().toLowerCase()
+            if (role.includes('partner') || role.includes('agency')) return true
+            if (profile.is_partner === true) return true
+            return false
+          })()
+
+          return isPartner ? (
+            <div className="mb-6">
+              <Link href="/PostJob">
+                <Button className="bg-green-600 hover:bg-green-700 text-white">+ Post Job</Button>
+              </Link>
+            </div>
+          ) : null
+        })()}
 
         {/* Job Listings */}
         <div className="grid md:grid-cols-2 gap-6">

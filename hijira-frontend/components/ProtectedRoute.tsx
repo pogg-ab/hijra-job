@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { getAccessToken } from '@/lib/api'
 
 interface ProtectedRouteProps {
   children: React.ReactNode
@@ -17,17 +18,14 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   const [isAuthenticated, setIsAuthenticated] = useState(false)
 
   useEffect(() => {
-    // Check if user is authenticated
-    // This is a mock check - replace with actual auth logic
+    // Use stored token to determine auth state
     const checkAuth = async () => {
       try {
-        // Mock auth check
-        const isAuth = !!localStorage.getItem('userToken')
+        const token = getAccessToken()
+        const isAuth = !!token
         setIsAuthenticated(isAuth)
 
-        if (!isAuth) {
-          router.push('/Login')
-        }
+        if (!isAuth) router.push('/Login')
       } catch (error) {
         console.error('Auth check failed:', error)
         router.push('/Login')

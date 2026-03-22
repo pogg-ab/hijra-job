@@ -20,4 +20,9 @@ class Contact extends Model
     protected $casts = [
         'is_read' => 'boolean',
     ];
+
+    public function replies()
+    {
+        return $this->hasMany(ContactReply::class)->orderBy('created_at', 'asc');
+    }
 }

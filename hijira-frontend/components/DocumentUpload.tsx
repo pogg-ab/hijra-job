@@ -2,6 +2,7 @@
 
 import React, { useState, useRef } from 'react'
 import { Button } from '@/components/ui/button'
+import { Documents } from '@/lib/api'
 
 interface DocumentUploadProps {
   onUpload?: (file: File) => void
@@ -61,15 +62,26 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
     }
 
     setUploadedFile(file)
-    setIsUploading(true)
+    setIsUploading(false)
+    setUploadedFile(file)
+  }
 
-    // Simulate upload
-    setTimeout(() => {
+  const handleConfirmUpload = async () => {
+    if (!uploadedFile) return
+    setIsUploading(true)
+    try {
+      const fd = new FormData()
+      fd.append('file', uploadedFile)
+      fd.append('document_type', documentType)
+      await Documents.upload(fd)
+      if (onUpload) onUpload(uploadedFile)
+      setUploadedFile(null)
+      alert('Document uploaded successfully')
+    } catch (err: any) {
+      alert(err?.message ?? 'Upload failed')
+    } finally {
       setIsUploading(false)
-      if (onUpload) {
-        onUpload(file)
-      }
-    }, 1500)
+    }
   }
 
   return (
@@ -150,6 +162,7 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
               type="button"
               className="flex-1 bg-green-600 hover:bg-green-700 text-white"
               disabled={isUploading}
+              onClick={handleConfirmUpload}
             >
               {isUploading ? 'Uploading...' : 'Confirm Upload'}
             </Button>
