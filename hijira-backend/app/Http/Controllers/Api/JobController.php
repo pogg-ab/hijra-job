@@ -13,12 +13,29 @@ class JobController extends Controller
     {
         $query = Job::query()->where('job_status', 'published');
 
+        if ($request->filled('q')) {
+            $q = trim((string) $request->input('q'));
+            $query->where(function ($inner) use ($q) {
+                $inner->where('title->en', 'like', "%{$q}%")
+                    ->orWhere('employer_name', 'like', "%{$q}%")
+                    ->orWhere('description->en', 'like', "%{$q}%");
+            });
+        }
+
         if ($request->filled('category')) {
             $query->where('category', $request->string('category'));
         }
 
         if ($request->filled('country')) {
             $query->where('country', $request->string('country'));
+        }
+
+        if ($request->filled('job_type')) {
+            $query->where('job_type', $request->string('job_type'));
+        }
+
+        if ($request->filled('skill_category')) {
+            $query->where('skill_category', $request->string('skill_category'));
         }
 
         if ($request->filled('status')) {
@@ -46,17 +63,28 @@ class JobController extends Controller
             'description.en' => ['required', 'string'],
             'category' => ['required', 'string', 'max:100'],
             'country' => ['required', 'string', 'max:100'],
+            'employer_name' => ['nullable', 'string', 'max:255'],
+            'job_type' => ['nullable', 'string', 'max:60'],
+            'skill_category' => ['nullable', 'string', 'max:100'],
             'salary_range' => ['nullable', 'string', 'max:100'],
+            'required_qualifications' => ['nullable', 'array'],
+            'required_qualifications.*' => ['string', 'max:255'],
+            'application_deadline' => ['nullable', 'date'],
             'status' => ['nullable', 'in:published,closed'],
             'job_status' => ['nullable', 'in:pending,published,closed'],
             'is_high_level' => ['nullable', 'boolean'],
-            'vacancies_total' => ['nullable', 'integer', 'min:1'],
+            'vacancies_total' => ['required', 'integer', 'min:1'],
             'foreign_agency_id' => ['nullable', 'exists:foreign_agencies,id'],
         ]);
 
         $validated['job_status'] = $validated['job_status'] ?? 'published';
         $validated['status'] = $validated['job_status'] === 'closed' ? 'closed' : 'published';
         $validated['created_by_user_id'] = $request->user()->id;
+
+        if (empty($validated['employer_name']) && ! empty($validated['foreign_agency_id'])) {
+            $agency = ForeignAgency::query()->find($validated['foreign_agency_id']);
+            $validated['employer_name'] = $agency?->company_name;
+        }
 
         $job = Job::create($validated);
 
@@ -75,7 +103,13 @@ class JobController extends Controller
             'description.en' => ['sometimes', 'string'],
             'category' => ['sometimes', 'string', 'max:100'],
             'country' => ['sometimes', 'string', 'max:100'],
+            'employer_name' => ['nullable', 'string', 'max:255'],
+            'job_type' => ['nullable', 'string', 'max:60'],
+            'skill_category' => ['nullable', 'string', 'max:100'],
             'salary_range' => ['nullable', 'string', 'max:100'],
+            'required_qualifications' => ['nullable', 'array'],
+            'required_qualifications.*' => ['string', 'max:255'],
+            'application_deadline' => ['nullable', 'date'],
             'status' => ['sometimes', 'in:published,closed'],
             'job_status' => ['sometimes', 'in:pending,published,closed'],
             'is_high_level' => ['sometimes', 'boolean'],
@@ -112,10 +146,20 @@ class JobController extends Controller
             'description.en' => ['required', 'string'],
             'category' => ['required', 'string', 'max:100'],
             'country' => ['required', 'string', 'max:100'],
+            'employer_name' => ['nullable', 'string', 'max:255'],
+            'job_type' => ['nullable', 'string', 'max:60'],
+            'skill_category' => ['nullable', 'string', 'max:100'],
             'salary_range' => ['nullable', 'string', 'max:100'],
+            'required_qualifications' => ['nullable', 'array'],
+            'required_qualifications.*' => ['string', 'max:255'],
+            'application_deadline' => ['nullable', 'date'],
             'is_high_level' => ['nullable', 'boolean'],
             'vacancies_total' => ['required', 'integer', 'min:1'],
         ]);
+
+        if (empty($validated['employer_name'])) {
+            $validated['employer_name'] = $agency->company_name;
+        }
 
         $job = Job::create([
             ...$validated,

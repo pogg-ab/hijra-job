@@ -14,7 +14,12 @@ class Job extends Model
         'description',
         'category',
         'country',
+        'employer_name',
+        'job_type',
+        'skill_category',
         'salary_range',
+        'required_qualifications',
+        'application_deadline',
         'status',
         'job_status',
         'is_high_level',
@@ -27,6 +32,8 @@ class Job extends Model
     protected $casts = [
         'title' => 'array',
         'description' => 'array',
+        'required_qualifications' => 'array',
+        'application_deadline' => 'date',
         'is_high_level' => 'boolean',
     ];
 

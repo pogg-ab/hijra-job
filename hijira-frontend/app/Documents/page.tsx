@@ -9,7 +9,7 @@ import { Profile, downloadFile, Documents, getAccessToken } from '@/lib/api'
 const DocumentsPage: React.FC = () => {
   const [docs, setDocs] = useState<any[]>([])
   const [file, setFile] = useState<File | null>(null)
-  const [docType, setDocType] = useState('passport')
+  const [docType, setDocType] = useState('Passport Copy')
   const [uploading, setUploading] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -70,20 +70,26 @@ const DocumentsPage: React.FC = () => {
               <label className="flex flex-col">
                 <span className="text-sm mb-1">Document Type</span>
                 <select value={docType} onChange={(e) => setDocType(e.target.value)} className="px-3 py-2 border rounded">
-                  <option value="Passport">Passport</option>
-                  <option value="ID">ID</option>
-                  <option value="Certificate">Certificate</option>
+                  <option value="Passport Copy">Passport Copy</option>
+                  <option value="Certificates">Certificates</option>
+                  <option value="Training Documents">Training Documents</option>
+                  <option value="Profile Photo">Profile Photo</option>
                 </select>
               </label>
 
               <label className="flex flex-col md:col-span-2">
                 <span className="text-sm mb-1">File</span>
-                <input type="file" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+                <input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
               </label>
             </div>
             <div>
               <Button onClick={async () => {
                 if (!file) return alert('Please choose a file')
+                const allowed = ['application/pdf', 'image/jpeg', 'image/png']
+                if (!allowed.includes(file.type)) {
+                  setError('Allowed formats are PDF, JPG, PNG only')
+                  return
+                }
                 const fd = new FormData()
                 fd.append('file', file)
                 fd.append('document_type', docType)
@@ -96,7 +102,7 @@ const DocumentsPage: React.FC = () => {
                   const list = Array.isArray(profile.documents) ? profile.documents : (profile.documents?.data ?? [])
                   setDocs(list)
                   setFile(null)
-                  setDocType('Passport')
+                  setDocType('Passport Copy')
                 } catch (err: any) {
                   setError(err?.message ?? 'Upload failed')
                 } finally {

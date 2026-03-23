@@ -13,34 +13,30 @@ const RegisterMultiStep: React.FC = () => {
   const [error, setError] = useState('')
   const [formData, setFormData] = useState({
     // Step 1
-    firstName: '',
-    lastName: '',
+    fullName: '',
     email: '',
+    phone: '',
     password: '',
     confirmPassword: '',
     // Step 2
-    phone: '',
-    dateOfBirth: '',
     gender: '',
-    preferredLanguage: 'en',
-    // Step 3 (profile)
+    age: '',
+    passportStatus: '',
     educationLevel: '',
     experienceSummary: '',
-    skills: '', // comma-separated
-    // Step 4
+    preferredLanguage: 'en',
+    // Step 3
     agreeTerms: false,
     agreePrivacy: false,
   })
  
 
   const steps = [
-    { num: 1, title: 'Personal Info', desc: 'Basic information' },
-    { num: 2, title: 'Contact Details', desc: 'How we reach you' },
-    { num: 3, title: 'Profile', desc: 'Education and skills' },
-    { num: 4, title: 'Agreement', desc: 'Terms & conditions' }
+    { num: 1, title: 'Registration', desc: 'Basic information' },
+    { num: 2, title: 'Profile Details', desc: 'Professional details' },
+    { num: 3, title: 'Agreement', desc: 'Terms & conditions' }
   ]
 
-  const languages = ['en', 'am', 'ar', 'or']
   const educationLevels = [
     'Primary',
     'Secondary',
@@ -67,16 +63,11 @@ const RegisterMultiStep: React.FC = () => {
     }
   }
 
-  const handleLanguageToggle = (lang: string) => {
-    // keep for future, not used now
-  }
-
-  const isStep1Valid = formData.firstName && formData.lastName && formData.email && 
+  const isStep1Valid = formData.fullName && formData.email && formData.phone &&
                        formData.password && formData.password === formData.confirmPassword
 
-  const isStep2Valid = formData.phone && formData.dateOfBirth && formData.gender
-
-  const isStep3Valid = formData.educationLevel && formData.experienceSummary
+  const isStep2Valid = formData.gender && formData.age && formData.educationLevel &&
+                       formData.experienceSummary && formData.passportStatus
 
   
 
@@ -109,36 +100,35 @@ const RegisterMultiStep: React.FC = () => {
   const requiredTerms = Boolean(termsPolicy)
   const requiredPrivacy = Boolean(privacyPolicy)
 
-  const isStep4Valid = (requiredTerms ? formData.agreeTerms : true) && (requiredPrivacy ? formData.agreePrivacy : true)
+  const isStep3Valid = (requiredTerms ? formData.agreeTerms : true) && (requiredPrivacy ? formData.agreePrivacy : true)
 
   const canProceed = 
     (currentStep === 1 && isStep1Valid) ||
     (currentStep === 2 && isStep2Valid) ||
-    (currentStep === 3 && isStep3Valid) ||
-    (currentStep === 4 && isStep4Valid)
+    (currentStep === 3 && isStep3Valid)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
 
-    if (currentStep === 4 && isStep4Valid) {
+    if (currentStep === 3 && isStep3Valid) {
       setIsSubmitting(true)
 
       try {
         const payload = {
-          name: `${formData.firstName} ${formData.lastName}`.trim(),
+          name: formData.fullName.trim(),
           email: formData.email,
           password: formData.password,
           password_confirmation: formData.confirmPassword,
           phone: formData.phone,
           preferred_language: formData.preferredLanguage || 'en',
           profile: {
-            full_name: `${formData.firstName} ${formData.lastName}`.trim(),
+            full_name: formData.fullName.trim(),
             gender: formData.gender || null,
-            date_of_birth: formData.dateOfBirth || null,
+            age: Number(formData.age),
+            passport_status: formData.passportStatus || null,
             education_level: formData.educationLevel || null,
             experience_summary: formData.experienceSummary || null,
-            skills: formData.skills ? formData.skills.split(',').map(s => s.trim()).filter(Boolean) : [],
           },
         }
 
@@ -185,22 +175,21 @@ const RegisterMultiStep: React.FC = () => {
   }
 
   return (
-    <main className="min-h-screen flex flex-col bg-background">
+    <main className="min-h-screen flex flex-col bg-linear-to-b from-primary/5 via-background to-background">
       <Navbar />
 
-      <div className="flex-1 max-w-3xl mx-auto w-full px-4 py-12">
+      <div className="flex-1 max-w-4xl mx-auto w-full px-4 py-10">
         {/* Header */}
-        <div className="text-center mb-12">
+        <div className="text-center mb-8 rounded-2xl border border-border/70 bg-card/80 p-6 shadow-sm">
           <h1 className="text-4xl font-bold text-foreground mb-2">Join Hijra Today</h1>
           <p className="text-lg text-foreground/60">Step {currentStep} of {steps.length}: {steps[currentStep - 1]?.title ?? ''}</p>
- 
         </div>
 
         {/* Progress Steps */}
-        <div className="flex items-center justify-between mb-12">
+        <div className="grid grid-cols-3 gap-4 mb-8">
           {steps.map((step, idx) => (
-            <div key={step.num} className="flex-1">
-              <div className="flex items-center">
+            <div key={step.num} className="rounded-xl border border-border/60 bg-card/70 p-3">
+              <div className="flex items-center justify-center">
                 <div
                   className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold text-sm transition ${
                     step.num < currentStep
@@ -212,63 +201,41 @@ const RegisterMultiStep: React.FC = () => {
                 >
                   {step.num < currentStep ? '✓' : step.num}
                 </div>
-                {idx < steps.length - 1 && (
-                  <div
-                    className={`flex-1 h-1 mx-2 transition ${
-                      step.num < currentStep ? 'bg-green-500' : 'bg-border'
-                    }`}
-                  ></div>
-                )}
               </div>
               <div className="mt-2 text-center">
                 <p className="text-xs font-semibold text-foreground">{step.title}</p>
+                <p className="text-[11px] text-foreground/60">{step.desc}</p>
               </div>
             </div>
           ))}
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="bg-card border border-border rounded-lg p-8 shadow-sm mb-8">
+        <form onSubmit={handleSubmit} className="bg-card border border-border/70 rounded-2xl p-6 md:p-8 shadow-sm mb-8">
           {error && (
             <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
               {error}
             </div>
           )}
 
-          {/* Step 1: Personal Info */}
+          {/* Step 1: Registration */}
           {currentStep === 1 && (
             <div className="space-y-6">
               <h2 className="text-2xl font-bold text-foreground mb-6">{steps[0].title}</h2>
 
-              <div className="grid md:grid-cols-2 gap-6">
-                <div>
-                  <label htmlFor="firstName" className="block text-sm font-semibold text-foreground mb-2">
-                    First Name
-                  </label>
-                  <input
-                    type="text"
-                    id="firstName"
-                    name="firstName"
-                    value={formData.firstName}
-                    onChange={handleChange}
-                    placeholder="Your first name"
-                    className="w-full px-4 py-3 border border-border rounded-lg bg-background text-foreground placeholder:text-foreground/40 focus:ring-2 focus:ring-primary focus:border-transparent transition outline-none"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="lastName" className="block text-sm font-semibold text-foreground mb-2">
-                    Last Name
-                  </label>
-                  <input
-                    type="text"
-                    id="lastName"
-                    name="lastName"
-                    value={formData.lastName}
-                    onChange={handleChange}
-                    placeholder="Your last name"
-                    className="w-full px-4 py-3 border border-border rounded-lg bg-background text-foreground placeholder:text-foreground/40 focus:ring-2 focus:ring-primary focus:border-transparent transition outline-none"
-                  />
-                </div>
+              <div>
+                <label htmlFor="fullName" className="block text-sm font-semibold text-foreground mb-2">
+                  Full Name
+                </label>
+                <input
+                  type="text"
+                  id="fullName"
+                  name="fullName"
+                  value={formData.fullName}
+                  onChange={handleChange}
+                  placeholder="Your full name"
+                  className="w-full px-4 py-3 border border-border rounded-lg bg-background text-foreground placeholder:text-foreground/40 focus:ring-2 focus:ring-primary focus:border-transparent transition outline-none"
+                />
               </div>
 
               <div>
@@ -282,6 +249,21 @@ const RegisterMultiStep: React.FC = () => {
                   value={formData.email}
                   onChange={handleChange}
                   placeholder="you@example.com"
+                  className="w-full px-4 py-3 border border-border rounded-lg bg-background text-foreground placeholder:text-foreground/40 focus:ring-2 focus:ring-primary focus:border-transparent transition outline-none"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="phone" className="block text-sm font-semibold text-foreground mb-2">
+                  Phone Number
+                </label>
+                <input
+                  type="tel"
+                  id="phone"
+                  name="phone"
+                  value={formData.phone}
+                  onChange={handleChange}
+                  placeholder="+251 9 XX XXX XXXX"
                   className="w-full px-4 py-3 border border-border rounded-lg bg-background text-foreground placeholder:text-foreground/40 focus:ring-2 focus:ring-primary focus:border-transparent transition outline-none"
                 />
               </div>
@@ -319,41 +301,13 @@ const RegisterMultiStep: React.FC = () => {
             </div>
           )}
 
-          {/* Step 2: Contact Details */}
+          {/* Step 2: Profile Details */}
           {currentStep === 2 && (
             <div className="space-y-6">
               <h2 className="text-2xl font-bold text-foreground mb-6">{steps[1].title}</h2>
 
-              <div>
-                <label htmlFor="phone" className="block text-sm font-semibold text-foreground mb-2">
-                  Phone Number
-                </label>
-                <input
-                  type="tel"
-                  id="phone"
-                  name="phone"
-                  value={formData.phone}
-                  onChange={handleChange}
-                  placeholder="+251 9 XX XXX XXXX"
-                  className="w-full px-4 py-3 border border-border rounded-lg bg-background text-foreground placeholder:text-foreground/40 focus:ring-2 focus:ring-primary focus:border-transparent transition outline-none"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="dateOfBirth" className="block text-sm font-semibold text-foreground mb-2">
-                  Date of Birth
-                </label>
-                <input
-                  type="date"
-                  id="dateOfBirth"
-                  name="dateOfBirth"
-                  value={formData.dateOfBirth}
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 border border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-primary focus:border-transparent transition outline-none"
-                />
-              </div>
-
-              <div>
+              <div className="grid md:grid-cols-2 gap-6">
+                <div>
                 <label htmlFor="gender" className="block text-sm font-semibold text-foreground mb-2">
                   Gender
                 </label>
@@ -368,6 +322,46 @@ const RegisterMultiStep: React.FC = () => {
                   <option value="male">Male</option>
                   <option value="female">Female</option>
                   <option value="other">Other</option>
+                </select>
+                </div>
+
+                <div>
+                  <label htmlFor="age" className="block text-sm font-semibold text-foreground mb-2">Age</label>
+                  <input
+                    type="number"
+                    id="age"
+                    name="age"
+                    min={18}
+                    max={65}
+                    value={formData.age}
+                    onChange={handleChange}
+                    placeholder="18 - 65"
+                    className="w-full px-4 py-3 border border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-primary focus:border-transparent transition outline-none"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="educationLevel" className="block text-sm font-semibold text-foreground mb-2">Education</label>
+                <select id="educationLevel" name="educationLevel" value={formData.educationLevel} onChange={handleChange} className="w-full px-4 py-3 border border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-primary focus:border-transparent transition outline-none">
+                  <option value="">Select education level</option>
+                  {educationLevels.map(e => <option key={e} value={e}>{e}</option>)}
+                </select>
+              </div>
+
+              <div>
+                <label htmlFor="experienceSummary" className="block text-sm font-semibold text-foreground mb-2">Experience</label>
+                <textarea id="experienceSummary" name="experienceSummary" value={formData.experienceSummary} onChange={handleChange} placeholder="Briefly describe your experience..." rows={4} className="w-full px-4 py-3 border border-border rounded-lg bg-background text-foreground placeholder:text-foreground/40 focus:ring-2 focus:ring-primary focus:border-transparent transition outline-none resize-none" />
+              </div>
+
+              <div>
+                <label htmlFor="passportStatus" className="block text-sm font-semibold text-foreground mb-2">Passport Status</label>
+                <select id="passportStatus" name="passportStatus" value={formData.passportStatus} onChange={handleChange} className="w-full px-4 py-3 border border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-primary focus:border-transparent transition outline-none">
+                  <option value="">Select passport status</option>
+                  <option value="valid">Valid Passport</option>
+                  <option value="expired">Expired Passport</option>
+                  <option value="applied">Applied / In Process</option>
+                  <option value="none">No Passport</option>
                 </select>
               </div>
 
@@ -385,35 +379,10 @@ const RegisterMultiStep: React.FC = () => {
             </div>
           )}
 
-          {/* Step 3: Professional Info */}
+          {/* Step 3: Agreement */}
           {currentStep === 3 && (
             <div className="space-y-6">
               <h2 className="text-2xl font-bold text-foreground mb-6">{steps[2].title}</h2>
-
-              <div>
-                <label htmlFor="educationLevel" className="block text-sm font-semibold text-foreground mb-2">Education level</label>
-                <select id="educationLevel" name="educationLevel" value={formData.educationLevel} onChange={handleChange} className="w-full px-4 py-3 border border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-primary focus:border-transparent transition outline-none">
-                  <option value="">Select education level</option>
-                  {educationLevels.map(e => <option key={e} value={e}>{e}</option>)}
-                </select>
-              </div>
-
-              <div>
-                <label htmlFor="experienceSummary" className="block text-sm font-semibold text-foreground mb-2">Experience summary</label>
-                <textarea id="experienceSummary" name="experienceSummary" value={formData.experienceSummary} onChange={handleChange} placeholder="Briefly describe your work experience..." rows={4} className="w-full px-4 py-3 border border-border rounded-lg bg-background text-foreground placeholder:text-foreground/40 focus:ring-2 focus:ring-primary focus:border-transparent transition outline-none resize-none" />
-              </div>
-
-              <div>
-                <label htmlFor="skills" className="block text-sm font-semibold text-foreground mb-2">Skills (comma separated)</label>
-                <input id="skills" name="skills" value={formData.skills} onChange={handleChange} placeholder="e.g. housekeeping, customer service" className="w-full px-4 py-3 border border-border rounded-lg bg-background text-foreground placeholder:text-foreground/40 focus:ring-2 focus:ring-primary focus:border-transparent transition outline-none" />
-              </div>
-            </div>
-          )}
-
-          {/* Step 4: Agreement */}
-          {currentStep === 4 && (
-            <div className="space-y-6">
-              <h2 className="text-2xl font-bold text-foreground mb-6">{steps[3].title}</h2>
 
               <div className="bg-primary/5 border border-primary/20 rounded-lg p-6 space-y-4">
                 {requiredTerms && (
@@ -470,12 +439,12 @@ const RegisterMultiStep: React.FC = () => {
           )}
 
           {/* Navigation Buttons */}
-          <div className="flex gap-4 mt-8 pt-8 border-t border-border">
+          <div className="flex gap-3 mt-8 pt-6 border-t border-border">
             {currentStep > 1 && (
               <Button
                 type="button"
                 variant="outline"
-                className="flex-1 border-primary/20 text-primary hover:bg-primary/5"
+                className="flex-1 border-primary/20 text-primary hover:bg-primary/5 h-11"
                 onClick={() => setCurrentStep(currentStep - 1)}
               >
                 Back
@@ -483,10 +452,10 @@ const RegisterMultiStep: React.FC = () => {
             )}
             <Button
               type="submit"
-              className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold disabled:opacity-50 disabled:cursor-not-allowed h-11"
               disabled={!canProceed || isSubmitting}
             >
-              {isSubmitting ? 'Creating Account...' : currentStep === 4 ? 'Create Account' : 'Continue'}
+              {isSubmitting ? 'Creating Account...' : currentStep === 3 ? 'Create Account' : 'Continue'}
             </Button>
           </div>
         </form>

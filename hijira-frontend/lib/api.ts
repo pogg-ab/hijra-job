@@ -146,6 +146,14 @@ export const Services = {
   list: () => apiRequest('/api/services'),
 }
 
+export const HomePage = {
+  get: () => apiRequest('/api/homepage'),
+}
+
+export const AboutPage = {
+  get: () => apiRequest('/api/about-page'),
+}
+
 export const Policies = {
   list: () => apiRequest('/api/policies'),
   getByType: (type: string) => apiRequest(`/api/policies/${type}`),

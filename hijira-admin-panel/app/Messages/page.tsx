@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react'
 import { AdminApi, API_BASE_URL } from '@/lib/api'
+import { showAlert } from '@/lib/popup'
 import { Button } from '@/components/ui/button'
 
 export default function MessagesPage() {
@@ -86,7 +87,7 @@ export default function MessagesPage() {
                         setSelected(detail);
                         setReplyMessage('');
                       } catch (err) {
-                        alert('Failed to send reply')
+                        await showAlert('Failed to send reply', 'Error')
                       }
                     }}>Reply</Button>
                     <Button variant="outline" onClick={() => setReplyMessage('')}>Cancel</Button>

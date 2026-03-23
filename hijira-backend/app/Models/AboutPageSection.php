@@ -5,26 +5,21 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class Service extends Model
+class AboutPageSection extends Model
 {
     use HasFactory;
 
     protected $fillable = [
+        'key',
         'title',
-        'slug',
         'description',
-        'qualification_requirements',
-        'target_countries',
-        'application_instructions',
-        'icon',
+        'content',
         'order',
         'is_active',
     ];
 
     protected $casts = [
-        'qualification_requirements' => 'array',
-        'target_countries' => 'array',
-        'application_instructions' => 'array',
+        'content' => 'array',
         'is_active' => 'boolean',
         'order' => 'integer',
     ];

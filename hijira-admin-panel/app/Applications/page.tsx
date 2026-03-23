@@ -5,6 +5,7 @@ import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
 import { Button } from '@/components/ui/button'
 import { AdminApi } from '@/lib/api'
+import { showAlert } from '@/lib/popup'
 
 const AdminApplicationsPage: React.FC = () => {
   const [apps, setApps] = useState<any[]>([])
@@ -35,7 +36,7 @@ const AdminApplicationsPage: React.FC = () => {
       await AdminApi.updateApplicationStatus(id, { status })
       setApps((s) => s.map(a => a.id === id ? { ...a, status } : a))
     } catch (err: any) {
-      alert(err?.message ?? 'Failed to update status')
+      await showAlert(err?.message ?? 'Failed to update status', 'Error')
     }
   }
 

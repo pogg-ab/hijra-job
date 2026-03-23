@@ -9,9 +9,14 @@ export default function PostJobPage() {
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
   const [category, setCategory] = useState("")
+  const [jobType, setJobType] = useState("Full-time")
+  const [skillCategory, setSkillCategory] = useState("")
+  const [employerName, setEmployerName] = useState("")
   const [country, setCountry] = useState("")
   const [vacancies, setVacancies] = useState(1)
   const [salaryRange, setSalaryRange] = useState("")
+  const [applicationDeadline, setApplicationDeadline] = useState("")
+  const [requiredQualifications, setRequiredQualifications] = useState("")
   const [isHighLevel, setIsHighLevel] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -19,15 +24,29 @@ export default function PostJobPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
+
+    if (!Number.isFinite(vacancies) || Number(vacancies) < 1) {
+      setError('Vacancies is required and must be at least 1.')
+      return
+    }
+
     setLoading(true)
     try {
       const payload = {
         title: { en: title },
         description: { en: description },
         category,
+        job_type: jobType,
+        skill_category: skillCategory || category,
+        employer_name: employerName || undefined,
         country,
         vacancies_total: Number(vacancies),
         salary_range: salaryRange || undefined,
+        application_deadline: applicationDeadline || undefined,
+        required_qualifications: requiredQualifications
+          .split(/\n|,/)
+          .map((line) => line.trim())
+          .filter((line) => line.length > 0),
         is_high_level: isHighLevel || undefined,
       }
 
@@ -61,8 +80,34 @@ export default function PostJobPage() {
               <input required value={category} onChange={(e) => setCategory(e.target.value)} className="mt-1 block w-full rounded-md border px-3 py-2" />
             </div>
             <div>
+              <label className="block text-sm font-medium">Job Type</label>
+              <select value={jobType} onChange={(e) => setJobType(e.target.value)} className="mt-1 block w-full rounded-md border px-3 py-2">
+                <option value="Full-time">Full-time</option>
+                <option value="Part-time">Part-time</option>
+                <option value="Contract">Contract</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium">Skill Category</label>
+              <input value={skillCategory} onChange={(e) => setSkillCategory(e.target.value)} className="mt-1 block w-full rounded-md border px-3 py-2" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium">Employer</label>
+              <input value={employerName} onChange={(e) => setEmployerName(e.target.value)} className="mt-1 block w-full rounded-md border px-3 py-2" />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
               <label className="block text-sm font-medium">Country</label>
               <input required value={country} onChange={(e) => setCountry(e.target.value)} className="mt-1 block w-full rounded-md border px-3 py-2" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium">Application Deadline</label>
+              <input type="date" value={applicationDeadline} onChange={(e) => setApplicationDeadline(e.target.value)} className="mt-1 block w-full rounded-md border px-3 py-2" />
             </div>
           </div>
 
@@ -81,6 +126,16 @@ export default function PostJobPage() {
                 High level
               </label>
             </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium">Required Qualifications (one per line)</label>
+            <textarea
+              value={requiredQualifications}
+              onChange={(e) => setRequiredQualifications(e.target.value)}
+              className="mt-1 block w-full rounded-md border px-3 py-2"
+              rows={4}
+            />
           </div>
 
           {error && <div className="text-destructive">{error}</div>}

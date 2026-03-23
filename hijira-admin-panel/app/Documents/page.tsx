@@ -5,6 +5,7 @@ import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
 import { Button } from '@/components/ui/button'
 import { AdminApi } from '@/lib/api'
+import { showAlert } from '@/lib/popup'
 
 const AdminDocumentsPage: React.FC = () => {
   const [docs, setDocs] = useState<any[]>([])
@@ -35,7 +36,7 @@ const AdminDocumentsPage: React.FC = () => {
       await AdminApi.updateDocumentStatus(id, { status })
       setDocs((s) => s.map(d => d.id === id ? { ...d, status } : d))
     } catch (err: any) {
-      alert(err?.message ?? 'Failed to update status')
+      await showAlert(err?.message ?? 'Failed to update status', 'Error')
     }
   }
 
@@ -51,7 +52,7 @@ const AdminDocumentsPage: React.FC = () => {
       a.remove()
       URL.revokeObjectURL(url)
     } catch (err: any) {
-      alert(err?.message ?? 'Download failed')
+      await showAlert(err?.message ?? 'Download failed', 'Error')
     }
   }
 

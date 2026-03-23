@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react'
 import Footer from '@/components/Footer'
 import { AdminApi, API_BASE_URL } from '@/lib/api'
+import { showAlert, showConfirm, showPrompt } from '@/lib/popup'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 
@@ -52,7 +53,7 @@ export default function PoliciesPage() {
               window.location.reload()
             } catch (err) {
               console.error(err)
-              alert('Failed to create policy')
+              await showAlert('Failed to create policy', 'Error')
             }
           }} className="space-y-3">
             <input required value={policyForm.title} onChange={(e) => setPolicyForm((s) => ({ ...s, title: e.target.value }))} placeholder="Policy title" className="w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground outline-none focus:ring-2 focus:ring-primary" />
@@ -90,7 +91,7 @@ export default function PoliciesPage() {
                   </div>
                   <div className="flex gap-2 ml-4">
                     <Button onClick={async () => {
-                      const newTitle = prompt('Title', p.title)
+                      const newTitle = await showPrompt('Enter a new title', p.title, 'Edit Policy', 'Title')
                       if (!newTitle) return
                       try {
                         await AdminApi.updatePolicy(p.id, { title: newTitle })
@@ -98,7 +99,7 @@ export default function PoliciesPage() {
                       } catch (e) { console.error(e) }
                     }} variant="outline">Edit</Button>
                     <Button onClick={async () => {
-                      if (!confirm('Delete?')) return
+                      if (!await showConfirm('Delete this policy?', 'Confirm Delete')) return
                       try {
                         await AdminApi.deletePolicy(p.id)
                         window.location.reload()

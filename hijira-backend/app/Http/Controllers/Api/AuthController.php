@@ -22,10 +22,12 @@ class AuthController extends Controller
             'phone' => ['required', 'regex:/^(\\+251|0)[0-9]{9}$/'],
             'preferred_language' => ['nullable', 'in:en,am,ar,or'],
             'profile.full_name' => ['required', 'string', 'max:255'],
-            'profile.gender' => ['nullable', 'string', 'max:20'],
+            'profile.gender' => ['required', 'string', 'max:20'],
+            'profile.age' => ['required', 'integer', 'min:18', 'max:65'],
+            'profile.passport_status' => ['required', 'string', 'max:50'],
             'profile.date_of_birth' => ['nullable', 'date'],
-            'profile.education_level' => ['nullable', 'string', 'max:255'],
-            'profile.experience_summary' => ['nullable', 'string'],
+            'profile.education_level' => ['required', 'string', 'max:255'],
+            'profile.experience_summary' => ['required', 'string'],
             'profile.skills' => ['nullable', 'array'],
             'profile.skills.*' => ['string', 'max:100'],
         ]);
@@ -43,10 +45,12 @@ class AuthController extends Controller
             JobSeekerProfile::create([
                 'user_id' => $user->id,
                 'full_name' => $validated['profile']['full_name'],
-                'gender' => $validated['profile']['gender'] ?? null,
+                'gender' => $validated['profile']['gender'],
+                'age' => $validated['profile']['age'],
+                'passport_status' => $validated['profile']['passport_status'],
                 'date_of_birth' => $validated['profile']['date_of_birth'] ?? null,
-                'education_level' => $validated['profile']['education_level'] ?? null,
-                'experience_summary' => $validated['profile']['experience_summary'] ?? null,
+                'education_level' => $validated['profile']['education_level'],
+                'experience_summary' => $validated['profile']['experience_summary'],
                 'skills' => $validated['profile']['skills'] ?? [],
             ]);
 

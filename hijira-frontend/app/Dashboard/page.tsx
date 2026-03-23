@@ -7,6 +7,7 @@ import Footer from '@/components/Footer'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { Profile, Partner } from '@/lib/api'
+import { calculateProfileCompletion } from '@/lib/profileCompletion'
 
 const DashboardPage: React.FC = () => {
   const [user, setUser] = useState<any | null>(null)
@@ -88,6 +89,7 @@ const DashboardPage: React.FC = () => {
   const stats = useMemo(() => {
     const totalDocs = documents.length
     const verifiedDocs = documents.filter((d: any) => d.status === 'verified').length
+    const completion = calculateProfileCompletion(user)
     const role = user?.role ?? user?.profile?.role ?? null
     const isPartner = role === 'partner' || role === 'agency' || user?.is_partner || user?.profile?.is_partner
 
@@ -96,15 +98,16 @@ const DashboardPage: React.FC = () => {
       return [
         { label: 'Active Applicants', value: String(activeApplicants), icon: '📋', color: 'from-blue-500 to-blue-600', bgColor: 'bg-blue-50 dark:bg-blue-950' },
         { label: 'Verified Documents', value: `${verifiedDocs} of ${totalDocs}`, icon: '✅', color: 'from-green-500 to-green-600', bgColor: 'bg-green-50 dark:bg-green-950' },
+        { label: 'Profile Complete', value: `${completion.percent}%`, icon: '📈', color: 'from-amber-500 to-orange-600', bgColor: 'bg-amber-50 dark:bg-amber-950' },
         { label: 'Messages', value: '0', icon: '💬', color: 'from-purple-500 to-purple-600', bgColor: 'bg-purple-50 dark:bg-purple-950' }
       ]
     }
 
     const activeApplications = applications.length
-    const profileCompleteness = user?.profile?.completeness ?? Math.round((verifiedDocs / Math.max(totalDocs, 1)) * 100)
     return [
       { label: 'Active Applications', value: String(activeApplications), icon: '📋', color: 'from-blue-500 to-blue-600', bgColor: 'bg-blue-50 dark:bg-blue-950' },
       { label: 'Verified Documents', value: `${verifiedDocs} of ${totalDocs}`, icon: '✅', color: 'from-green-500 to-green-600', bgColor: 'bg-green-50 dark:bg-green-950' },
+      { label: 'Profile Complete', value: `${completion.percent}%`, icon: '📈', color: 'from-amber-500 to-orange-600', bgColor: 'bg-amber-50 dark:bg-amber-950' },
       { label: 'Messages', value: '0', icon: '💬', color: 'from-purple-500 to-purple-600', bgColor: 'bg-purple-50 dark:bg-purple-950' }
     ]
   }, [applications, documents, user, partnerApplicants])
@@ -114,7 +117,7 @@ const DashboardPage: React.FC = () => {
       <Navbar />
 
       {/* Header */}
-      <section className="bg-gradient-to-br from-primary/10 to-secondary/10 border-b border-border px-4 py-8">
+      <section className="bg-linear-to-br from-primary/10 to-secondary/10 border-b border-border px-4 py-8">
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center justify-between mb-2">
             <h1 className="text-3xl md:text-4xl font-bold text-foreground">{
@@ -134,7 +137,7 @@ const DashboardPage: React.FC = () => {
                 <span className="text-3xl">{stat.icon}</span>
               </div>
               <div className="text-sm text-foreground/60 mb-1">{stat.label}</div>
-              <div className={`text-3xl font-bold bg-gradient-to-r ${stat.color} bg-clip-text text-transparent`}>
+              <div className={`text-3xl font-bold bg-linear-to-r ${stat.color} bg-clip-text text-transparent`}>
                 {stat.value}
               </div>
             </div>

@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react'
 import { AdminApi } from '@/lib/api'
+import { showAlert, showConfirm } from '@/lib/popup'
 import { Button } from '@/components/ui/button'
 
 export default function FaqAdminPage() {
@@ -42,7 +43,7 @@ export default function FaqAdminPage() {
                 setNewQuestion('')
                 setNewAnswer('')
                 await load()
-              } catch (err) { alert('Failed') }
+              } catch (err) { await showAlert('Failed', 'Error') }
             }} disabled={!newQuestion.trim()}>Create</Button>
             <Button variant="outline" onClick={() => { setNewQuestion(''); setNewAnswer('') }}>Clear</Button>
           </div>
@@ -59,10 +60,10 @@ export default function FaqAdminPage() {
                 try {
                   await AdminApi.updateFaq(f.id, { question: f.question, answer: (e.target as HTMLTextAreaElement).value, is_public: !!(e.target as HTMLTextAreaElement).value })
                   await load()
-                } catch (err) { alert('Update failed') }
+                } catch (err) { await showAlert('Update failed', 'Error') }
               }} className="w-full p-2 border rounded mb-2" />
               <div className="flex gap-2">
-                <Button onClick={async () => { if (!confirm('Delete this FAQ?')) return; await AdminApi.deleteFaq(f.id); await load() }} variant="outline">Delete</Button>
+                <Button onClick={async () => { if (!await showConfirm('Delete this FAQ?', 'Confirm Delete')) return; await AdminApi.deleteFaq(f.id); await load() }} variant="outline">Delete</Button>
               </div>
             </div>
           ))}

@@ -155,11 +155,7 @@ const LoginPage: React.FC = () => {
             Staff accounts are created only by Super Admin.
           </div>
 
-          <div className="mt-6 text-center">
-            <Link href="/" className="text-primary font-semibold hover:text-primary/80 transition">
-              Back to Admin Home
-            </Link>
-          </div>
+          {/* Back to home link removed per request */}
         </div>
     </main>
   )

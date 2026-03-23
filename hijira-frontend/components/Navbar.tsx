@@ -15,6 +15,7 @@ const Navbar: React.FC = () => {
 
   const links = [
     { label: t('nav.home'), href: '/' },
+    { label: 'About', href: '/About' },
     { label: t('nav.jobs'), href: '/Jobs' },
     { label: t('nav.services'), href: '/Services' },
     { label: t('nav.contact'), href: '/Contact' },
@@ -73,7 +74,7 @@ const Navbar: React.FC = () => {
         <div className="flex justify-between items-center h-16 md:h-20">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2">
-            <div className="w-10 h-10 bg-gradient-to-br from-primary to-primary/70 rounded-lg flex items-center justify-center">
+            <div className="w-10 h-10 bg-linear-to-br from-primary to-primary/70 rounded-lg flex items-center justify-center">
               <span className="text-white font-bold text-lg">H</span>
             </div>
             <span className="font-bold text-xl text-foreground hidden sm:inline">Hijra</span>

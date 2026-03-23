@@ -2,6 +2,7 @@
 
 import React, { useState, useRef } from 'react'
 import { Button } from '@/components/ui/button'
+import { showAlert } from '@/lib/popup'
 
 interface DocumentUploadProps {
   onUpload?: (file: File) => void
@@ -49,14 +50,14 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
     }
   }
 
-  const handleFile = (file: File) => {
+  const handleFile = async (file: File) => {
     if (!allowedTypes.includes(file.type)) {
-      alert('Invalid file type. Please upload PDF, JPG, PNG, or DOC.')
+      await showAlert('Invalid file type. Please upload PDF, JPG, PNG, or DOC.', 'Validation')
       return
     }
 
     if (file.size > maxSize) {
-      alert('File size exceeds 5MB limit.')
+      await showAlert('File size exceeds 5MB limit.', 'Validation')
       return
     }
 

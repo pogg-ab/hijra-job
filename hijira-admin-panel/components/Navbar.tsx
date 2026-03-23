@@ -7,12 +7,19 @@ import { getAdminToken, clearAdminAuth, Auth } from '@/lib/api'
 import { useTranslation } from 'react-i18next'
 import { AppLanguage } from '@/lib/i18n'
 import { useLanguage } from '@/components/language-provider'
+import { usePathname } from 'next/navigation'
 
 const Navbar: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const { t } = useTranslation()
   const { language, setLanguage } = useLanguage()
+  const pathname = usePathname()
+
+  // hide navbar on the login page
+  if (pathname && pathname.toLowerCase() === '/login') {
+    return null
+  }
 
   useEffect(() => {
     setIsAuthenticated(Boolean(getAdminToken()))
@@ -20,6 +27,8 @@ const Navbar: React.FC = () => {
 
   const links = [
     { label: 'Dashboard', href: '/Dashboard' },
+    { label: 'Homepage', href: '/Homepage' },
+    { label: 'About', href: '/About' },
     { label: 'Services', href: '/Services' },
     { label: 'Policies', href: '/Policies' },
     { label: 'FAQ', href: '/FAQ' },
@@ -33,7 +42,7 @@ const Navbar: React.FC = () => {
         <div className="flex justify-between items-center h-16 md:h-20">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2">
-            <div className="w-10 h-10 bg-gradient-to-br from-primary to-primary/70 rounded-lg flex items-center justify-center">
+            <div className="w-10 h-10 bg-linear-to-br from-primary to-primary/70 rounded-lg flex items-center justify-center">
               <span className="text-white font-bold text-lg">H</span>
             </div>
             <span className="font-bold text-xl text-foreground hidden sm:inline">Hijra</span>

@@ -1,10 +1,14 @@
 <?php
 
 use App\Http\Controllers\Api\AdminController;
+use App\Http\Controllers\Api\AboutPageAdminController;
+use App\Http\Controllers\Api\AboutPageController;
 use App\Http\Controllers\Api\ApplicationController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ContactController;
 use App\Http\Controllers\Api\DocumentController;
+use App\Http\Controllers\Api\HomePageAdminController;
+use App\Http\Controllers\Api\HomePageController;
 use App\Http\Controllers\Api\JobController;
 use App\Http\Controllers\Api\ProfileController;
 use Illuminate\Support\Facades\Route;
@@ -15,6 +19,8 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::post('/refresh', [AuthController::class, 'refresh']);
 Route::get('/jobs', [JobController::class, 'index']);
 Route::get('/jobs/{job}', [JobController::class, 'show']);
+Route::get('/homepage', [HomePageController::class, 'index']);
+Route::get('/about-page', [AboutPageController::class, 'index']);
 Route::get('/services', [\App\Http\Controllers\Api\ServiceController::class, 'index']);
 Route::get('/policies', [\App\Http\Controllers\Api\PolicyController::class, 'index']);
 Route::get('/policies/{policy}/download', [\App\Http\Controllers\Api\PolicyController::class, 'download']);
@@ -49,6 +55,24 @@ Route::middleware('auth:api')->group(function () {
     });
 
     Route::prefix('admin')->middleware('isAdmin')->group(function () {
+        // Admin homepage content management
+        Route::get('/homepage/sections', [HomePageAdminController::class, 'sectionsIndex']);
+        Route::put('/homepage/sections/{key}', [HomePageAdminController::class, 'upsertSection']);
+
+        Route::get('/homepage/countries', [HomePageAdminController::class, 'countriesIndex']);
+        Route::post('/homepage/countries', [HomePageAdminController::class, 'countriesStore']);
+        Route::patch('/homepage/countries/{country}', [HomePageAdminController::class, 'countriesUpdate']);
+        Route::delete('/homepage/countries/{country}', [HomePageAdminController::class, 'countriesDestroy']);
+
+        Route::get('/homepage/testimonials', [HomePageAdminController::class, 'testimonialsIndex']);
+        Route::post('/homepage/testimonials', [HomePageAdminController::class, 'testimonialsStore']);
+        Route::patch('/homepage/testimonials/{testimonial}', [HomePageAdminController::class, 'testimonialsUpdate']);
+        Route::delete('/homepage/testimonials/{testimonial}', [HomePageAdminController::class, 'testimonialsDestroy']);
+
+        // Admin about page content management
+        Route::get('/about-page/sections', [AboutPageAdminController::class, 'sectionsIndex']);
+        Route::put('/about-page/sections/{key}', [AboutPageAdminController::class, 'upsertSection']);
+
         // Admin services management
         Route::get('/services', [\App\Http\Controllers\Api\ServiceController::class, 'adminIndex']);
         Route::post('/services', [\App\Http\Controllers\Api\ServiceController::class, 'store']);

@@ -18,7 +18,7 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
   const [isUploading, setIsUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'application/msword']
+  const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png']
   const maxSize = 5 * 1024 * 1024 // 5MB
 
   const handleDragEnter = (e: React.DragEvent) => {
@@ -52,7 +52,7 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
 
   const handleFile = (file: File) => {
     if (!allowedTypes.includes(file.type)) {
-      alert('Invalid file type. Please upload PDF, JPG, PNG, or DOC.')
+      alert('Invalid file type. Please upload PDF, JPG, or PNG.')
       return
     }
 
@@ -63,7 +63,6 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
 
     setUploadedFile(file)
     setIsUploading(false)
-    setUploadedFile(file)
   }
 
   const handleConfirmUpload = async () => {
@@ -105,13 +104,13 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
             Drag and drop your file here or click to select
           </p>
           <p className="text-xs text-foreground/50 mb-4">
-            Accepted formats: PDF, JPG, PNG, DOC (Max 5MB)
+            Accepted formats: PDF, JPG, PNG (Max 5MB)
           </p>
           <input
             ref={fileInputRef}
             type="file"
             onChange={handleFileSelect}
-            accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+            accept=".pdf,.jpg,.jpeg,.png"
             className="hidden"
             aria-label="Upload file"
           />

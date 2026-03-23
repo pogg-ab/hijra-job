@@ -27,7 +27,7 @@ class DocumentController extends Controller
     public function upload(Request $request)
     {
         $validated = $request->validate([
-            'document_type' => ['required', 'in:Passport,ID,Certificate'],
+            'document_type' => ['required', 'in:Passport Copy,Certificates,Training Documents,Profile Photo'],
             'file' => ['required', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
         ]);
 
@@ -73,7 +73,7 @@ class DocumentController extends Controller
         }
 
         $validated = $request->validate([
-            'document_type' => ['required', 'in:Passport,ID,Certificate'],
+            'document_type' => ['required', 'in:Passport Copy,Certificates,Training Documents,Profile Photo'],
         ]);
 
         $document->update([
@@ -112,21 +112,12 @@ class DocumentController extends Controller
             return response()->json(['message' => 'File not found.'], 404);
         }
 
-        $stream = Storage::disk('private')->readStream($document->file_path);
+        $path = Storage::disk('private')->path($document->file_path);
         $filename = basename($document->file_path);
-        $mime = Storage::disk('private')->mimeType($document->file_path) ?? 'application/octet-stream';
 
-        $headers = [
-            'Content-Type' => $mime,
+        return response()->file($path, [
             'Content-Disposition' => 'inline; filename="' . $filename . '"',
             'Cache-Control' => 'private, must-revalidate',
-        ];
-
-        return response()->stream(function () use ($stream) {
-            fpassthru($stream);
-            if (is_resource($stream)) {
-                fclose($stream);
-            }
-        }, 200, $headers);
+        ]);
     }
 }

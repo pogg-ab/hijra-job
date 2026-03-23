@@ -69,7 +69,7 @@ export const Auth = {
   me: () => apiRequest('/api/me', {}, true),
 }
 
-export const AdminApi = {
+export const AdminApi: any = {
   stats: () => apiRequest('/api/admin/stats', {}, true),
   roles: () => apiRequest('/api/admin/roles', {}, true),
   users: () => apiRequest('/api/admin/users', {}, true),
@@ -121,6 +121,32 @@ AdminApi.faqs = () => apiRequest('/api/admin/faqs', {}, true)
 AdminApi.createFaq = (payload: any) => apiRequest('/api/admin/faqs', { method: 'POST', body: JSON.stringify(payload) }, true)
 AdminApi.updateFaq = (id: string | number, payload: any) => apiRequest(`/api/admin/faqs/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }, true)
 AdminApi.deleteFaq = (id: string | number) => apiRequest(`/api/admin/faqs/${id}`, { method: 'DELETE' }, true)
+
+// Homepage content management (admin)
+AdminApi.homepageSections = () => apiRequest('/api/admin/homepage/sections', {}, true)
+AdminApi.updateHomepageSection = (key: string, payload: any) =>
+  apiRequest(`/api/admin/homepage/sections/${key}`, { method: 'PUT', body: JSON.stringify(payload) }, true)
+
+AdminApi.homepageCountries = () => apiRequest('/api/admin/homepage/countries', {}, true)
+AdminApi.createHomepageCountry = (payload: any) =>
+  apiRequest('/api/admin/homepage/countries', { method: 'POST', body: JSON.stringify(payload) }, true)
+AdminApi.updateHomepageCountry = (id: string | number, payload: any) =>
+  apiRequest(`/api/admin/homepage/countries/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }, true)
+AdminApi.deleteHomepageCountry = (id: string | number) =>
+  apiRequest(`/api/admin/homepage/countries/${id}`, { method: 'DELETE' }, true)
+
+AdminApi.homepageTestimonials = () => apiRequest('/api/admin/homepage/testimonials', {}, true)
+AdminApi.createHomepageTestimonial = (payload: any) =>
+  apiRequest('/api/admin/homepage/testimonials', { method: 'POST', body: JSON.stringify(payload) }, true)
+AdminApi.updateHomepageTestimonial = (id: string | number, payload: any) =>
+  apiRequest(`/api/admin/homepage/testimonials/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }, true)
+AdminApi.deleteHomepageTestimonial = (id: string | number) =>
+  apiRequest(`/api/admin/homepage/testimonials/${id}`, { method: 'DELETE' }, true)
+
+// About page content management (admin)
+AdminApi.aboutPageSections = () => apiRequest('/api/admin/about-page/sections', {}, true)
+AdminApi.updateAboutPageSection = (key: string, payload: any) =>
+  apiRequest(`/api/admin/about-page/sections/${key}`, { method: 'PUT', body: JSON.stringify(payload) }, true)
 
 export const SuperAdmin = {
   createStaff: (payload: any) => apiRequest('/api/super-admin/staff', { method: 'POST', body: JSON.stringify(payload) }, true),

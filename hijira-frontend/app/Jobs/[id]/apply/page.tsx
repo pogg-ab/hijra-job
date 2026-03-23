@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
-import { Jobs, Auth, Applications } from '@/lib/api'
+import { Jobs, Auth, Applications, getAccessToken } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 
 export default function JobApplyPage() {
@@ -16,6 +16,7 @@ export default function JobApplyPage() {
   const [profile, setProfile] = useState<any | null>(null)
   const [applied, setApplied] = useState(false)
   const [coverLetter, setCoverLetter] = useState('')
+  const [confirmDetails, setConfirmDetails] = useState(false)
   
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -25,6 +26,13 @@ export default function JobApplyPage() {
     let mounted = true
     async function load() {
       if (!id) return
+
+      const token = getAccessToken()
+      if (!token) {
+        router.push(`/Login?next=/Jobs/${id}/apply`)
+        return
+      }
+
       try {
         const data = await Jobs.show(id)
         if (mounted) setJob(data)
@@ -47,15 +55,33 @@ export default function JobApplyPage() {
     }
     load()
     return () => { mounted = false }
-  }, [id])
+  }, [id, router])
 
-  const needsVerified = job?.is_high_level === true
+  const fullName = profile?.profile?.full_name || profile?.name || ''
+  const phone = profile?.phone || ''
+  const gender = profile?.profile?.gender || ''
+  const age = profile?.profile?.age || ''
+  const education = profile?.profile?.education_level || ''
+  const experience = profile?.profile?.experience_summary || ''
+  const passportStatus = profile?.profile?.passport_status || ''
+
+  const missingProfileFields = [
+    !fullName && 'Full name',
+    !phone && 'Phone',
+    !gender && 'Gender',
+    !age && 'Age',
+    !education && 'Education',
+    !experience && 'Work experience',
+    !passportStatus && 'Passport status',
+  ].filter(Boolean) as string[]
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
     setSuccess(null)
     if (!id) return setError('Missing job id')
+    if (!confirmDetails) return setError('Please confirm your profile details before submitting.')
+    if (missingProfileFields.length > 0) return setError('Please complete your profile before applying.')
     // No document verification gating; users may apply if the job is published.
     setLoading(true)
     try {
@@ -88,6 +114,38 @@ export default function JobApplyPage() {
         {success && <div className="text-success mb-4">{success}</div>}
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="rounded-lg border border-border bg-card p-4 space-y-3">
+            <h2 className="text-lg font-semibold">Confirm Profile Details</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+              <p><span className="font-medium">Full name:</span> {fullName || 'Not set'}</p>
+              <p><span className="font-medium">Phone:</span> {phone || 'Not set'}</p>
+              <p><span className="font-medium">Gender:</span> {gender || 'Not set'}</p>
+              <p><span className="font-medium">Age:</span> {age || 'Not set'}</p>
+              <p><span className="font-medium">Education:</span> {education || 'Not set'}</p>
+              <p><span className="font-medium">Passport status:</span> {passportStatus || 'Not set'}</p>
+            </div>
+            <p className="text-sm"><span className="font-medium">Work experience:</span> {experience || 'Not set'}</p>
+
+            {missingProfileFields.length > 0 && (
+              <div className="text-sm text-destructive">
+                Missing required profile details: {missingProfileFields.join(', ')}. Please update your profile first.
+                <div className="mt-2">
+                  <Button type="button" variant="outline" onClick={() => router.push('/Profile')}>Go to Profile</Button>
+                </div>
+              </div>
+            )}
+
+            <label className="flex items-start gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={confirmDetails}
+                onChange={(e) => setConfirmDetails(e.target.checked)}
+                className="mt-1"
+              />
+              <span>I confirm these profile details are correct for this application.</span>
+            </label>
+          </div>
+
           <div>
             <label className="block text-sm font-medium">Cover Letter</label>
             <textarea value={coverLetter} onChange={(e) => setCoverLetter(e.target.value)} required className="mt-1 block w-full rounded-md border px-3 py-2" rows={8} />
@@ -96,15 +154,17 @@ export default function JobApplyPage() {
           <div>
             {applied ? (
               <div className="text-muted">You have already applied for this job.</div>
+            ) : missingProfileFields.length > 0 ? (
+              <div className="text-destructive">Complete your profile details before applying.</div>
             ) : ((job?.vacancies_total ?? 0) - (job?.vacancies_filled ?? 0)) <= 0 ? (
               <div className="text-destructive">No vacancies available for this job.</div>
             ) : (
               <button
                 type="submit"
-                disabled={loading}
-                aria-disabled={loading}
-                title={loading ? 'Submitting...' : ''}
-                className={`inline-flex items-center px-4 py-2 rounded-md text-white ${loading ? 'bg-primary/60 opacity-50 cursor-not-allowed' : 'bg-primary hover:bg-primary/90'}`}
+                disabled={loading || !confirmDetails}
+                aria-disabled={loading || !confirmDetails}
+                title={loading ? 'Submitting...' : (!confirmDetails ? 'Please confirm your profile details first.' : '')}
+                className={`inline-flex items-center px-4 py-2 rounded-md text-white ${(loading || !confirmDetails) ? 'bg-primary/60 opacity-50 cursor-not-allowed' : 'bg-primary hover:bg-primary/90'}`}
               >
                 {loading ? 'Submitting...' : 'Submit Application'}
               </button>

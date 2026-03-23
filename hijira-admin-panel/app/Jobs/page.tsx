@@ -6,6 +6,7 @@ import Footer from '@/components/Footer'
 import JobCard from '@/components/JobCard'
 import { Button } from '@/components/ui/button'
 import { AdminApi } from '@/lib/api'
+import { showAlert } from '@/lib/popup'
 
 const JobsPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('')
@@ -38,7 +39,7 @@ const JobsPage: React.FC = () => {
       await AdminApi.publishJob(id)
       setJobs((s) => s.map(j => j.id === id ? { ...j, status: 'published' } : j))
     } catch (err) {
-      alert('Failed to publish job')
+      await showAlert('Failed to publish job', 'Error')
     }
   }
 
@@ -47,7 +48,7 @@ const JobsPage: React.FC = () => {
       await AdminApi.closeJob(id)
       setJobs((s) => s.map(j => j.id === id ? { ...j, status: 'closed' } : j))
     } catch (err) {
-      alert('Failed to close job')
+      await showAlert('Failed to close job', 'Error')
     }
   }
 
@@ -66,7 +67,7 @@ const JobsPage: React.FC = () => {
     <main className="min-h-screen flex flex-col bg-background">
 
       {/* Page Header */}
-      <section className="bg-gradient-to-br from-primary/10 to-secondary/10 border-b border-border px-4 py-12">
+      <section className="bg-linear-to-br from-primary/10 to-secondary/10 border-b border-border px-4 py-12">
         <div className="max-w-6xl mx-auto">
           <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-4">Available Jobs</h1>
           <p className="text-lg text-foreground/60 max-w-2xl">

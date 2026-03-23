@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { LanguageProvider } from '@/components/language-provider'
 import Navbar from '@/components/Navbar'
+import PopupHost from '@/components/PopupHost'
 import './globals.css'
 
 const _geist = Geist({ subsets: ["latin"] });
@@ -43,6 +44,7 @@ export default function RootLayout({
         <LanguageProvider>
           <Navbar />
           {children}
+          <PopupHost />
         </LanguageProvider>
         <Analytics />
       </body>

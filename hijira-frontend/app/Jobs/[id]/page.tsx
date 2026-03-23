@@ -7,6 +7,24 @@ import Footer from '@/components/Footer'
 import { Jobs } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 
+function localizedText(value: any): string {
+  if (!value) return ''
+  if (typeof value === 'string') return value
+  if (typeof value === 'object') return value.en ?? Object.values(value)[0] ?? ''
+  return String(value)
+}
+
+function formatDate(dateValue: string | null | undefined): string {
+  if (!dateValue) return 'Not specified'
+  const parsed = new Date(dateValue)
+  if (Number.isNaN(parsed.getTime())) return 'Not specified'
+  return parsed.toLocaleDateString(undefined, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  })
+}
+
 export default function JobDetailPage() {
   const params = useParams() as { id?: string }
   const router = useRouter()
@@ -46,14 +64,73 @@ export default function JobDetailPage() {
         {error && <p className="text-destructive">Error: {error}</p>}
 
         {job && (
-          <article>
-            <h1 className="text-3xl font-bold mb-2">{(typeof job.title === 'string') ? job.title : (job.title?.en ?? Object.values(job.title || {})[0] ?? '')}</h1>
-            <p className="text-foreground/60 mb-4">{job.country ?? ''} • {job.vacancies_total ?? ''} vacancies • {((job.vacancies_total ?? 0) - (job.vacancies_filled ?? 0))} remaining</p>
-            <div className="prose max-w-none">
-              <p>{(typeof job.description === 'string') ? job.description : (job.description?.en ?? Object.values(job.description || {})[0] ?? '')}</p>
-            </div>
+          <article className="space-y-6">
+            <header className="rounded-2xl border border-border bg-card p-6 md:p-8">
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div>
+                  <h1 className="text-3xl font-bold mb-2">{localizedText(job.title)}</h1>
+                  <p className="text-foreground/70">
+                    {job.employer_name || job.foreign_agency?.company_name || 'Employer not specified'}
+                  </p>
+                </div>
 
-            <div className="mt-8">
+                <span className="inline-flex rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+                  {job.job_type || 'Full-time'}
+                </span>
+              </div>
+
+              <div className="mt-5 grid gap-3 md:grid-cols-3 text-sm">
+                <div className="rounded-lg bg-background px-3 py-2 border border-border">
+                  <p className="text-foreground/60">Country</p>
+                  <p className="font-medium text-foreground">{job.country || 'Not specified'}</p>
+                </div>
+                <div className="rounded-lg bg-background px-3 py-2 border border-border">
+                  <p className="text-foreground/60">Salary Range</p>
+                  <p className="font-medium text-foreground">{job.salary_range || 'Negotiable'}</p>
+                </div>
+                <div className="rounded-lg bg-background px-3 py-2 border border-border">
+                  <p className="text-foreground/60">Application Deadline</p>
+                  <p className="font-medium text-foreground">{formatDate(job.application_deadline)}</p>
+                </div>
+              </div>
+
+              <div className="mt-4 flex flex-wrap gap-2">
+                <span className="inline-flex rounded-full bg-secondary/50 px-3 py-1 text-xs font-medium text-secondary-foreground">
+                  Skill: {job.skill_category || job.category || 'General'}
+                </span>
+                <span className="inline-flex rounded-full bg-secondary/50 px-3 py-1 text-xs font-medium text-secondary-foreground">
+                  Vacancies: {job.vacancies_total ?? 0}
+                </span>
+                <span className="inline-flex rounded-full bg-secondary/50 px-3 py-1 text-xs font-medium text-secondary-foreground">
+                  Remaining: {(job.vacancies_total ?? 0) - (job.vacancies_filled ?? 0)}
+                </span>
+              </div>
+            </header>
+
+            <section className="rounded-2xl border border-border bg-card p-6 md:p-8">
+              <h2 className="text-xl font-semibold text-foreground mb-3">Job Description</h2>
+              <p className="text-foreground/80 leading-relaxed whitespace-pre-line">
+                {localizedText(job.description) || 'No description provided.'}
+              </p>
+            </section>
+
+            <section className="rounded-2xl border border-border bg-card p-6 md:p-8">
+              <h2 className="text-xl font-semibold text-foreground mb-3">Required Qualifications</h2>
+              {Array.isArray(job.required_qualifications) && job.required_qualifications.length > 0 ? (
+                <ul className="space-y-2 text-foreground/80">
+                  {job.required_qualifications.map((item: string, idx: number) => (
+                    <li key={`${item}-${idx}`} className="flex gap-2">
+                      <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-foreground/60">No qualifications listed.</p>
+              )}
+            </section>
+
+            <div className="pt-2">
               {((job.vacancies_total ?? 0) - (job.vacancies_filled ?? 0)) <= 0 ? (
                 <Button disabled className="opacity-60">No Vacancies</Button>
               ) : (

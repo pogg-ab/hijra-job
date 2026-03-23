@@ -13,13 +13,19 @@ class JobSeekerProfile extends Model
         'user_id',
         'full_name',
         'gender',
+        'age',
+        'passport_status',
         'date_of_birth',
+        'nationality',
+        'address',
         'education_level',
         'experience_summary',
+        'preferred_country',
         'skills',
     ];
 
     protected $casts = [
+        'age' => 'integer',
         'date_of_birth' => 'date',
         'skills' => 'array',
     ];
